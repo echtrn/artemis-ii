@@ -170,7 +170,7 @@ window.addEventListener('resize', resize);
 // --- Scene layout (pixel space) ---
 const MOON_PX = 55;           // Moon radius
 const MOON_X = W * 0.55;      // Moon position — right of centre
-const MOON_Y_FRAC = 0.48;     // fraction of H
+const MOON_Y_FRAC = 0.62;     // fraction of H — lower to give room for high flybys
 
 // Earth indicator — small dot far left
 const EARTH_PX = 12;
@@ -189,10 +189,10 @@ let resultTimer = 0;
 let ox, oy, ovx, ovy;
 
 // Slider value mapped to flyby distance in pixels (from Moon surface)
-// Capped so Orion always starts within the canvas
 function flybyPx() {
-  const maxDist = Math.max(40, getMoonY() - MOON_PX - 20); // stay within canvas
-  return 10 + (parseInt(distSlider.value) - 20) / 380 * Math.min(170, maxDist - MOON_PX);
+  // Map slider 20..400 to flyby distance, capped to stay within canvas
+  const maxFlyby = Math.max(60, H * MOON_Y_FRAC - MOON_PX - 15);
+  return 10 + (parseInt(distSlider.value) - 20) / 380 * (maxFlyby - 10);
 }
 
 function getMoonY() { return H * MOON_Y_FRAC; }
