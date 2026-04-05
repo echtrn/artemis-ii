@@ -176,7 +176,9 @@ const MOON_Y_FRAC = 0.62;     // fraction of H — lower to give room for high f
 const EARTH_PX = 12;
 
 // Physics constants (pixel-space gravity)
-const GM_MOON = 120;   // tuned: crash <250, home 250-380, drift 390+
+// Scale gravity to canvas height so outcomes work at any screen size
+// Tuned for H~450: GM=120. Scale linearly.
+function getGM() { return 120 * (H / 450); }
 const APPROACH_SPEED = 0.7; // pixels per sim-step — slow and dramatic
 
 // --- State ---
@@ -235,7 +237,7 @@ function stepOrion() {
     return;
   }
 
-  const a = GM_MOON / (r * r);
+  const a = getGM() / (r * r);
   ovx += a * dx / r;
   ovy += a * dy / r;
   ox += ovx;
