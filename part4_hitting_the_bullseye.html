@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Part 4 — Hitting the Bullseye | Artemis II</title>
+<style>
+  :root {
+    --bg: #0b0e17;
+    --surface: #131829;
+    --border: #2a3050;
+    --text: #d4daf0;
+    --text-dim: #8890aa;
+    --accent: #4e9fff;
+    --accent2: #36d399;
+    --orange: #ff8844;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7; font-size: 17px; overflow-x: hidden;
+  }
+  header { text-align: center; padding: 40px 20px 20px; }
+  .badge {
+    display: inline-block; background: #2a5a9f; color: #fff; font-size: 11px;
+    font-weight: 700; padding: 3px 10px; border-radius: 12px;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+  header h1 { font-size: 2.2em; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  header .subtitle { color: var(--text-dim); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+
+  .canvas-wrap { position: relative; width: 100%; max-width: 1000px; margin: 30px auto 0; }
+  canvas { display: block; width: 100%; border-radius: 12px; background: #080b14; }
+
+  #outcomeLabel {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    font-size: 22px; font-weight: 700; padding: 10px 28px; border-radius: 8px;
+    pointer-events: none; transition: opacity 0.4s; opacity: 0; white-space: nowrap; z-index: 10;
+  }
+  #outcomeLabel.splash { background: rgba(54,211,153,0.15); border: 1px solid rgba(54,211,153,0.4); color: #36d399; opacity: 1; }
+  #outcomeLabel.burn { background: rgba(255,60,60,0.2); border: 1px solid rgba(255,60,60,0.4); color: #ff6666; opacity: 1; }
+  #outcomeLabel.skip { background: rgba(169,127,255,0.15); border: 1px solid rgba(169,127,255,0.4); color: #a97fff; opacity: 1; }
+
+  .controls { max-width: 700px; margin: 20px auto; padding: 0 20px; }
+  .speed-row { display: flex; align-items: center; gap: 14px; }
+  .speed-row label { font-size: 15px; color: var(--text-dim); white-space: nowrap; }
+  .speed-row input[type="range"] { flex: 1; accent-color: var(--accent); height: 6px; }
+  .speed-row .speed-val {
+    font-family: 'SF Mono','Fira Code',monospace; font-size: 16px;
+    color: var(--orange); min-width: 80px; text-align: right;
+  }
+  .fire-row { display: flex; justify-content: center; gap: 14px; margin-top: 14px; }
+  #restartBtn {
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+    padding: 12px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  #restartBtn:hover { border-color: var(--text-dim); color: var(--text); }
+  #enterBtn {
+    background: linear-gradient(135deg, #22aa66, #33cc88);
+    color: #fff; border: none; padding: 14px 44px; border-radius: 10px;
+    font-size: 20px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase;
+    cursor: pointer; transition: transform 0.1s, filter 0.1s;
+    box-shadow: 0 0 20px rgba(51,204,136,0.3);
+  }
+  #enterBtn:hover { filter: brightness(1.15); transform: scale(1.04); }
+  #enterBtn:active { transform: scale(0.96); }
+  #enterBtn:disabled { opacity: 0.3; cursor: default; filter: none; transform: none; box-shadow: none; }
+  .hint { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 10px; }
+
+  .explainer { max-width: 660px; margin: 40px auto; padding: 0 20px 60px; }
+  .explainer h2 { font-size: 1.3em; color: #fff; margin-bottom: 12px; }
+  .explainer p { margin-bottom: 14px; }
+  .callout {
+    background: var(--surface); border-left: 4px solid var(--orange);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; font-size: 15px;
+  }
+  .callout strong { color: #fff; }
+
+  .phase-nav {
+    max-width: 660px; margin: 0 auto; padding: 20px 20px 40px;
+    display: flex; justify-content: space-between; border-top: 1px solid var(--border);
+  }
+  .phase-nav span { color: var(--text-dim); font-size: 14px; }
+  .phase-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .top-nav { max-width: 660px; margin: 0 auto; padding: 12px 20px 0; display: flex; justify-content: space-between; }
+  .top-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 22px; opacity: 0.7; transition: opacity 0.2s; }
+  .top-nav a:hover { opacity: 1; }
+  .top-nav .placeholder { width: 22px; }
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <a href="part3_the_slingshot.html">&larr;</a>
+  <span class="placeholder"></span>
+</div>
+
+<header>
+  <div class="badge">Learn Astrophysics — Artemis II Mission</div>
+  <h1>Hitting the Bullseye</h1>
+  <p class="subtitle">After a 1.6 million km round trip at Mach 32,<br>you have a 2.5° window to survive reentry.</p>
+</header>
+
+<div class="canvas-wrap">
+  <canvas id="sim"></canvas>
+  <div id="outcomeLabel"></div>
+</div>
+
+<div class="controls">
+  <div class="speed-row">
+    <label for="angleSlider">Entry angle:</label>
+    <input type="range" id="angleSlider" min="-12" max="-1" value="-4" step="0.1">
+    <span class="speed-val" id="angleVal">-4.0&deg;</span>
+  </div>
+  <div class="fire-row">
+    <button id="restartBtn">Restart</button>
+    <button id="enterBtn">Enter!</button>
+  </div>
+  <div class="hint">The safe corridor is narrow. Find the right angle.</div>
+</div>
+
+<div class="explainer">
+  <h2>What you're seeing</h2>
+  <p>Orion is returning from the Moon at <strong>11 km/s</strong> — Mach 32. It has to hit Earth's atmosphere at exactly the right angle.</p>
+  <p>The green band on Earth's edge is the <strong>reentry corridor</strong>. That's the target after a 1.6 million kilometre round trip.</p>
+  <ul style="margin: 10px 0 15px 20px;">
+    <li><strong>Too shallow</strong> — Orion skims the top of the atmosphere and bounces back into space. Like skipping a stone on water — except the stone never comes back.</li>
+    <li><strong>Too steep</strong> — Orion plunges in too fast. The heating overwhelms the heat shield. It burns up.</li>
+    <li><strong>Just right</strong> — Orion enters, decelerates, survives the heat, deploys parachutes, and splashes down in the Pacific.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>Artemis II:</strong> Orion uses a technique called "skip reentry" — it deliberately bounces off the atmosphere once, then re-enters for the final descent. This spreads the deceleration over a longer time, reducing the g-forces on the crew from a brutal 8g to a manageable 4g. The heat shield still reaches 2,800&deg;C — half the temperature of the Sun's surface.
+  </div>
+</div>
+
+<div class="phase-nav">
+  <a href="part3_the_slingshot.html">&larr; Part 3: The Slingshot</a>
+  <span>Part 4 — Hitting the Bullseye</span>
+  <span style="color:var(--accent2);">End of journey</span>
+</div>
+
+<script>
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+const angleSlider = document.getElementById('angleSlider');
+const angleValEl = document.getElementById('angleVal');
+const enterBtn = document.getElementById('enterBtn');
+const restartBtn = document.getElementById('restartBtn');
+const outcomeEl = document.getElementById('outcomeLabel');
+
+let W, H, dpr;
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = rect.width;
+  H = Math.min(W * 0.65, window.innerHeight * 0.6);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// --- Stars ---
+const bgStars = [];
+for (let i = 0; i < 120; i++) {
+  bgStars.push({ x: Math.random(), y: Math.random() * 0.65, r: 0.3 + Math.random() * 1, a: 0.1 + Math.random() * 0.4 });
+}
+
+// --- Earth geometry ---
+const ATMO_THICKNESS = 16;
+function earthR() { return W * 2.5; }
+function earthCX() { return W * 0.5; }
+function earthCY() { return H + earthR() - H * 0.3; }
+function surfY() { return earthCY() - earthR(); }
+
+// --- Corridor ---
+const CORRIDOR_MIN = -7.5; // steep limit
+const CORRIDOR_MAX = -5.0; // shallow limit
+
+// --- State ---
+let fired = false;
+let outcome = null;
+let fireTime = 0;
+let animPhase = null; // 'approach' | 'skip' | 'burn' | 'splash' | 'cinematic'
+let phaseStart = 0;
+
+function getAngle() { return parseFloat(angleSlider.value); }
+function getOutcomeType() {
+  const a = getAngle();
+  if (a > CORRIDOR_MAX) return 'skip';
+  if (a < CORRIDOR_MIN) return 'burn';
+  return 'splash';
+}
+
+// --- Pre-computed trajectory paths ---
+// Each path is a function of t (0..1) returning {x, y}
+// The angle controls the steepness of the approach visually.
+// steepness: 0 = very shallow (grazing), 1 = very steep (plunging)
+function getSteepness() {
+  const a = getAngle(); // -1 to -12
+  return (-a - 1) / 11; // 0 at -1, 1 at -12
+}
+
+// Approach: upper right to atmosphere contact point — angle-dependent
+// Steep = hits atmosphere far RIGHT (short horizontal travel, steep dive)
+// Shallow = hits atmosphere far LEFT (long horizontal travel, grazing)
+// Just right = hits atmosphere in the MIDDLE of screen
+function approachPos(t) {
+  const steep = getSteepness(); // 0 = shallow (-1°), 1 = steep (-12°)
+  const startX = W * 0.92, startY = H * 0.05;
+  // End X: shallow lands far left, steep lands far right, sweet spot is middle
+  const endX = W * (0.15 + steep * 0.55); // 0.15 (shallow) to 0.70 (steep)
+  const endY = surfY() - ATMO_THICKNESS * 0.3 + steep * 20;
+  const ease = t * t * (3 - 2 * t);
+  // Shallow = very flat arc (bows up slightly); steep = curves down hard
+  const arcBow = (1 - steep) * -15 + steep * 35;
+  const bowY = Math.sin(t * Math.PI) * arcBow;
+  return {
+    x: startX + (endX - startX) * ease,
+    y: startY + (endY - startY) * ease + bowY,
+  };
+}
+
+// Skip: shallow entry, grazes atmosphere far left, bounces back up and off screen left
+function skipPos(t) {
+  const endPt = approachPos(1);
+  const ease = t * t;
+  // Dip slightly into atmosphere then deflect upward and left
+  const dipY = Math.sin(t * Math.PI * 0.5) * 18;
+  return {
+    x: endPt.x - ease * W * 0.45,
+    y: endPt.y - ease * H * 0.5 + dipY,
+  };
+}
+
+// Burn: steep entry on the right, plunges straight down into Earth
+function burnPos(t) {
+  const endPt = approachPos(1);
+  const ease = t * t;
+  return {
+    x: endPt.x - ease * W * 0.05,
+    y: endPt.y + ease * H * 0.2,
+  };
+}
+
+// Splash: enters atmosphere in the middle, decelerates along the curve, levels off
+function splashPos(t) {
+  const endPt = approachPos(1);
+  const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  // Enters atmosphere, curves along the surface, decelerates
+  const dipY = Math.sin(t * Math.PI * 0.65) * 20;
+  return {
+    x: endPt.x - ease * W * 0.25,
+    y: endPt.y + dipY,
+  };
+}
+
+// --- Durations (seconds) ---
+const DUR_APPROACH = 2.5;
+const DUR_SKIP = 2.5;
+const DUR_BURN = 2.0;
+const DUR_SPLASH = 2.5;
+const DUR_CINEMATIC = 9;
+
+// --- Drawing ---
+
+function drawStars() {
+  for (const s of bgStars) {
+    ctx.fillStyle = `rgba(200,215,255,${s.a})`;
+    ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawEarth() {
+  const eR = earthR(), eCX = earthCX(), eCY = earthCY();
+
+  // Atmosphere glow
+  const atmoGrad = ctx.createRadialGradient(eCX, eCY, eR - 2, eCX, eCY, eR + ATMO_THICKNESS + 12);
+  atmoGrad.addColorStop(0, 'rgba(80,160,255,0)');
+  atmoGrad.addColorStop(0.4, 'rgba(100,180,255,0.07)');
+  atmoGrad.addColorStop(0.7, 'rgba(120,200,255,0.12)');
+  atmoGrad.addColorStop(1, 'rgba(100,180,255,0)');
+  ctx.fillStyle = atmoGrad;
+  ctx.beginPath(); ctx.arc(eCX, eCY, eR + ATMO_THICKNESS + 12, 0, Math.PI * 2); ctx.fill();
+
+  // Atmosphere band
+  ctx.strokeStyle = 'rgba(120,200,255,0.18)';
+  ctx.lineWidth = ATMO_THICKNESS;
+  ctx.beginPath(); ctx.arc(eCX, eCY, eR + ATMO_THICKNESS / 2, 0, Math.PI * 2); ctx.stroke();
+
+  // Earth body
+  const eg = ctx.createRadialGradient(eCX, eCY - eR * 0.02, eR * 0.3, eCX, eCY, eR);
+  eg.addColorStop(0, '#4a9edd');
+  eg.addColorStop(0.4, '#3580bb');
+  eg.addColorStop(0.7, '#2a6699');
+  eg.addColorStop(1, '#1d4a70');
+  ctx.fillStyle = eg;
+  ctx.beginPath(); ctx.arc(eCX, eCY, eR, 0, Math.PI * 2); ctx.fill();
+
+  // Landmasses
+  ctx.save();
+  ctx.beginPath(); ctx.arc(eCX, eCY, eR * 0.999, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = 'rgba(45,120,60,0.4)';
+  const sY = surfY();
+  [
+    { x: W * 0.08, y: sY + 18, rx: 70, ry: 30, rot: 5 },
+    { x: W * 0.28, y: sY + 20, rx: 55, ry: 40, rot: -8 },
+    { x: W * 0.5, y: sY + 12, rx: 90, ry: 28, rot: 3 },
+    { x: W * 0.72, y: sY + 22, rx: 50, ry: 35, rot: 10 },
+    { x: W * 0.9, y: sY + 28, rx: 65, ry: 22, rot: -5 },
+    { x: W * 0.18, y: sY + 50, rx: 80, ry: 45, rot: 7 },
+    { x: W * 0.6, y: sY + 48, rx: 70, ry: 40, rot: -3 },
+  ].forEach(l => {
+    ctx.beginPath(); ctx.ellipse(l.x, l.y, l.rx, l.ry, l.rot * Math.PI / 180, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.restore();
+
+  // Cloud wisps
+  ctx.save();
+  ctx.beginPath(); ctx.arc(eCX, eCY, eR, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  [
+    { x: W * 0.15, y: sY + 10, rx: 110, ry: 5 },
+    { x: W * 0.45, y: sY + 16, rx: 130, ry: 4 },
+    { x: W * 0.8, y: sY + 14, rx: 90, ry: 6 },
+  ].forEach(c => {
+    ctx.beginPath(); ctx.ellipse(c.x, c.y, c.rx, c.ry, 0, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawCorridor() {
+  // No visible corridor marking — the user must discover the sweet spot
+}
+
+function drawPreview() {
+  if (fired) return;
+  // Show Orion at start with a dashed preview of the full approach path
+  const start = approachPos(0);
+
+  // Draw dashed preview of the entire approach trajectory
+  ctx.strokeStyle = 'rgba(255,136,68,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  for (let i = 1; i <= 20; i++) {
+    const p = approachPos(i / 20);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // End point marker
+  const end = approachPos(1);
+  ctx.fillStyle = 'rgba(255,136,68,0.35)';
+  ctx.beginPath(); ctx.arc(end.x, end.y, 3, 0, Math.PI * 2); ctx.fill();
+
+  // Orion marker
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(start.x, start.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ff8844';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(start.x, start.y, 4, 0, Math.PI * 2); ctx.stroke();
+
+  ctx.fillStyle = '#ff8844';
+  ctx.font = '11px Inter, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Orion', start.x - 10, start.y - 8);
+  ctx.textAlign = 'left';
+}
+
+function drawProjectile(x, y, heat, trailPts) {
+  // Trail
+  if (trailPts && trailPts.length > 1) {
+    for (let i = 1; i < trailPts.length; i++) {
+      const p = trailPts[i - 1], t = trailPts[i];
+      const alpha = 0.1 + 0.5 * (i / trailPts.length);
+      let r, g, b;
+      if (t.h > 0.6) { r = 255; g = Math.floor(100 - t.h * 60); b = 50; }
+      else if (t.h > 0.2) { r = 255; g = Math.floor(200 - t.h * 120); b = 80; }
+      else { r = 255; g = 136; b = 68; }
+      ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+    }
+  }
+
+  // Heat glow
+  if (heat > 0.1) {
+    const glowR = 6 + heat * 28;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+    glow.addColorStop(0, `rgba(255,${Math.floor(200 - heat * 150)},${Math.floor(80 - heat * 60)},${heat * 0.5})`);
+    glow.addColorStop(0.5, `rgba(255,100,30,${heat * 0.25})`);
+    glow.addColorStop(1, 'rgba(200,50,10,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(x, y, glowR, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Dot
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = heat > 0.3 ? `rgb(255,${Math.floor(150 - heat * 100)},50)` : '#ff8844';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.stroke();
+}
+
+// --- Burn explosion ---
+let burnDebris = null;
+function drawBurnExplosion(x, y, t) {
+  if (!burnDebris) {
+    burnDebris = [];
+    for (let i = 0; i < 18; i++) {
+      burnDebris.push({ angle: Math.random() * Math.PI * 2, speed: 0.5 + Math.random() * 2.5, size: 1 + Math.random() * 2.5 });
+    }
+  }
+  const flashR = 8 + t * 55;
+  const alpha = (1 - t) * 0.7;
+  const flash = ctx.createRadialGradient(x, y, 0, x, y, flashR);
+  flash.addColorStop(0, `rgba(255,220,100,${alpha})`);
+  flash.addColorStop(0.3, `rgba(255,100,30,${alpha * 0.6})`);
+  flash.addColorStop(1, 'rgba(200,50,10,0)');
+  ctx.fillStyle = flash;
+  ctx.beginPath(); ctx.arc(x, y, flashR, 0, Math.PI * 2); ctx.fill();
+  for (const d of burnDebris) {
+    const dist = d.speed * t * 45;
+    const px = x + Math.cos(d.angle) * dist;
+    const py = y + Math.sin(d.angle) * dist;
+    ctx.fillStyle = `rgba(255,${Math.floor(120 + Math.random() * 80)},30,${(1 - t) * 0.7})`;
+    ctx.beginPath(); ctx.arc(px, py, d.size * (1 - t * 0.5), 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ============================================
+// CINEMATIC SPLASHDOWN (same as before)
+// ============================================
+
+function drawCinematicSplashdown(now) {
+  const elapsed = (now - phaseStart) / 1000;
+  const totalDur = DUR_CINEMATIC;
+  const t = Math.min(1, elapsed / totalDur);
+
+  if (t < 0.1) {
+    // Fade to black
+    ctx.fillStyle = `rgba(3,5,16,${t / 0.1})`;
+    ctx.fillRect(0, 0, W, H);
+
+  } else if (t < 0.4) {
+    // Capsule under parachutes in sky
+    const skyT = (t - 0.1) / 0.3;
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, `rgba(${10 + skyT * 15},${20 + skyT * 40},${50 + skyT * 70},1)`);
+    skyGrad.addColorStop(0.5, `rgba(${20 + skyT * 30},${50 + skyT * 60},${100 + skyT * 60},1)`);
+    skyGrad.addColorStop(1, `rgba(${30 + skyT * 35},${80 + skyT * 60},${140 + skyT * 50},1)`);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Fading stars
+    if (skyT < 0.4) {
+      const sa = 1 - skyT * 2.5;
+      for (const s of bgStars) {
+        ctx.fillStyle = `rgba(200,215,255,${s.a * sa})`;
+        ctx.beginPath(); ctx.arc(s.x * W, s.y * H * 0.5, s.r, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    const chuteY = H * 0.18 + skyT * H * 0.12;
+    const spread = 55;
+    const capsY = chuteY + 70;
+    for (let i = -1; i <= 1; i++) {
+      const cx = W / 2 + i * spread, cy = chuteY;
+      ctx.fillStyle = i === 0 ? 'rgba(255,140,50,0.75)' : 'rgba(240,240,245,0.7)';
+      ctx.beginPath(); ctx.arc(cx, cy, 26, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 0.5;
+      for (let p = -2; p <= 2; p++) { ctx.beginPath(); ctx.moveTo(cx + p * 8, cy - 2); ctx.lineTo(cx + p * 7, cy - 22); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(200,200,210,0.3)'; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.moveTo(cx - 22, cy + 4); ctx.lineTo(W / 2, capsY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 22, cy + 4); ctx.lineTo(W / 2, capsY); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(200,200,215,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 14, capsY); ctx.lineTo(W / 2 + 14, capsY);
+    ctx.lineTo(W / 2 + 10, capsY + 18); ctx.lineTo(W / 2 - 10, capsY + 18);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(80,70,60,0.6)';
+    ctx.fillRect(W / 2 - 10, capsY + 18, 20, 4);
+
+  } else if (t < 0.72) {
+    // Ocean approaching
+    const oceanT = (t - 0.4) / 0.32;
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, '#1a4a80'); skyGrad.addColorStop(0.3, '#2878bb');
+    skyGrad.addColorStop(0.5, '#3090cc'); skyGrad.addColorStop(1, '#2070aa');
+    ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, W, H);
+
+    const horizonY = H * 0.38 + oceanT * H * 0.08;
+    const oceanGrad = ctx.createLinearGradient(0, horizonY, 0, H);
+    oceanGrad.addColorStop(0, '#1a6090'); oceanGrad.addColorStop(0.4, '#1a5580'); oceanGrad.addColorStop(1, '#0d3050');
+    ctx.fillStyle = oceanGrad; ctx.fillRect(0, horizonY, W, H - horizonY);
+    ctx.strokeStyle = 'rgba(150,200,240,0.2)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, horizonY); ctx.lineTo(W, horizonY); ctx.stroke();
+    ctx.strokeStyle = 'rgba(100,180,230,0.07)';
+    for (let i = 0; i < 7; i++) {
+      const wy = horizonY + 12 + i * (15 + oceanT * 8);
+      ctx.beginPath();
+      for (let x = 0; x < W; x += 4) { const y = wy + Math.sin(x * 0.014 + i * 2.3 + now * 0.0008) * (2 + i * 2); x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    const descentY = H * 0.18 + oceanT * H * 0.28;
+    const spread = 50 - oceanT * 15;
+    for (let i = -1; i <= 1; i++) {
+      const cx = W / 2 + i * spread, cy = descentY;
+      ctx.fillStyle = i === 0 ? 'rgba(255,140,50,0.7)' : 'rgba(240,240,245,0.6)';
+      ctx.beginPath(); ctx.arc(cx, cy, 20 - oceanT * 3, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,200,210,0.25)'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(cx - 16, cy + 3); ctx.lineTo(W / 2, descentY + 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 16, cy + 3); ctx.lineTo(W / 2, descentY + 50); ctx.stroke();
+    }
+    const capY = descentY + 50;
+    ctx.fillStyle = 'rgba(200,200,215,0.8)';
+    ctx.beginPath(); ctx.moveTo(W / 2 - 11, capY); ctx.lineTo(W / 2 + 11, capY);
+    ctx.lineTo(W / 2 + 8, capY + 14); ctx.lineTo(W / 2 - 8, capY + 14); ctx.closePath(); ctx.fill();
+
+  } else {
+    // Splashdown in water
+    const splashT = (t - 0.72) / 0.28;
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, '#1a4a80'); skyGrad.addColorStop(0.35, '#2878bb'); skyGrad.addColorStop(1, '#2070aa');
+    ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, W, H);
+    const horizonY = H * 0.44;
+    const oceanGrad = ctx.createLinearGradient(0, horizonY, 0, H);
+    oceanGrad.addColorStop(0, '#1a6090'); oceanGrad.addColorStop(0.4, '#1a5580'); oceanGrad.addColorStop(1, '#0d3050');
+    ctx.fillStyle = oceanGrad; ctx.fillRect(0, horizonY, W, H - horizonY);
+    ctx.strokeStyle = 'rgba(100,180,230,0.07)';
+    for (let i = 0; i < 8; i++) {
+      const wy = horizonY + 10 + i * 20;
+      ctx.beginPath();
+      for (let x = 0; x < W; x += 4) { const y = wy + Math.sin(x * 0.014 + i * 2.3 + now * 0.0008) * (2 + i * 2.5); x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    const waterLine = horizonY + H * 0.1;
+    const bobY = waterLine + Math.sin(now * 0.002) * 2;
+
+    if (splashT < 0.5) {
+      const rp = splashT / 0.5;
+      for (let r = 0; r < 3; r++) {
+        const p = Math.max(0, rp - r * 0.12);
+        if (p <= 0) continue;
+        ctx.strokeStyle = `rgba(150,220,255,${(1 - p) * 0.4})`;
+        ctx.lineWidth = 2 * (1 - p);
+        ctx.beginPath(); ctx.arc(W / 2, bobY, p * 50 + r * 10, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (splashT < 0.2) {
+        const sp = splashT / 0.2;
+        ctx.fillStyle = `rgba(180,220,255,${(1 - sp) * 0.4})`;
+        for (let s = 0; s < 12; s++) {
+          const ang = -Math.PI + (s / 12) * Math.PI;
+          ctx.beginPath(); ctx.arc(W / 2 + Math.cos(ang) * sp * 35, bobY + Math.sin(ang) * sp * 14 - sp * 18, 2 * (1 - sp), 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+    if (splashT > 0.25) {
+      const ca = Math.min(1, (splashT - 0.25) / 0.3) * 0.35;
+      ctx.fillStyle = `rgba(240,240,245,${ca})`;
+      ctx.beginPath(); ctx.ellipse(W / 2 + 35, bobY + 4, 22, 5, 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(255,140,50,${ca})`;
+      ctx.beginPath(); ctx.ellipse(W / 2 + 15, bobY + 7, 16, 4, -0.2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(200,200,215,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 14, bobY - 10); ctx.lineTo(W / 2 + 14, bobY - 10);
+    ctx.lineTo(W / 2 + 10, bobY + 4); ctx.lineTo(W / 2 - 10, bobY + 4);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(100,120,150,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = 'rgba(26,96,144,0.5)';
+    ctx.fillRect(0, bobY, W, H - bobY);
+  }
+}
+
+// ============================================
+// MAIN ANIMATION LOOP
+// ============================================
+
+// Trail accumulator
+let trailPts = [];
+
+function loop() {
+  const now = performance.now();
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#080b14';
+  ctx.fillRect(0, 0, W, H);
+
+  // --- CINEMATIC MODE ---
+  if (animPhase === 'cinematic') {
+    drawCinematicSplashdown(now);
+    // Auto reset
+    if ((now - phaseStart) / 1000 > DUR_CINEMATIC + 1) restart();
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  // --- ORBITAL VIEW ---
+  drawStars();
+  drawEarth();
+  drawCorridor();
+
+  if (!fired) {
+    drawPreview();
+  } else {
+    const elapsed = (now - phaseStart) / 1000;
+
+    if (animPhase === 'approach') {
+      const t = Math.min(1, elapsed / DUR_APPROACH);
+      const pos = approachPos(t);
+      const heat = t > 0.7 ? (t - 0.7) / 0.3 * 0.3 : 0; // slight heat at end
+      trailPts.push({ x: pos.x, y: pos.y, h: heat });
+      drawProjectile(pos.x, pos.y, heat, trailPts);
+
+      // Screen shake near atmosphere
+      if (t > 0.85) {
+        const shk = (t - 0.85) / 0.15 * 2;
+        ctx.setTransform(dpr, 0, 0, dpr, (Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk);
+      }
+
+      if (t >= 1) {
+        const type = getOutcomeType();
+        animPhase = type;
+        phaseStart = now;
+        outcome = type;
+      }
+
+    } else if (animPhase === 'skip') {
+      const t = Math.min(1, elapsed / DUR_SKIP);
+      const pos = skipPos(t);
+      const heat = Math.max(0, (1 - t) * 0.4 * (t < 0.3 ? t / 0.3 : 1)); // brief heat then fading
+      trailPts.push({ x: pos.x, y: pos.y, h: heat });
+      drawProjectile(pos.x, pos.y, heat, trailPts);
+
+      if (t >= 1) {
+        // Stay showing for a bit then reset
+        if (elapsed > DUR_SKIP + 3) restart();
+      }
+
+    } else if (animPhase === 'burn') {
+      const t = Math.min(1, elapsed / DUR_BURN);
+      const pos = burnPos(Math.min(t, 0.7)); // stops moving at 70%
+      const heat = Math.min(1, t * 1.5);
+      if (t < 0.7) trailPts.push({ x: pos.x, y: pos.y, h: heat });
+      drawProjectile(pos.x, pos.y, heat, trailPts);
+
+      // Explosion after hitting
+      if (t > 0.6) {
+        const explT = (t - 0.6) / 0.4;
+        drawBurnExplosion(pos.x, pos.y, explT);
+      }
+
+      // Screen shake
+      if (t > 0.3) {
+        const shk = Math.min(1, (t - 0.3) / 0.3) * 5;
+        ctx.setTransform(dpr, 0, 0, dpr, (Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk);
+      }
+
+      if (elapsed > DUR_BURN + 3) restart();
+
+    } else if (animPhase === 'splash') {
+      const t = Math.min(1, elapsed / DUR_SPLASH);
+      const pos = splashPos(t);
+      const heat = t < 0.5 ? t * 0.8 : Math.max(0, 0.4 - (t - 0.5) * 0.8); // heats up then cools
+      trailPts.push({ x: pos.x, y: pos.y, h: heat });
+
+      // Screen shake during heating
+      if (t > 0.1 && t < 0.6) {
+        const shk = Math.sin((t - 0.1) / 0.5 * Math.PI) * 3;
+        ctx.setTransform(dpr, 0, 0, dpr, (Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk);
+      }
+
+      // Parachutes near end
+      if (t > 0.75) {
+        const chuteAlpha = Math.min(1, (t - 0.75) / 0.15) * 0.6;
+        ctx.globalAlpha = chuteAlpha;
+        for (let i = -1; i <= 1; i++) {
+          const cx = pos.x + i * 10;
+          const cy = pos.y - 18 - (t - 0.75) * 40;
+          ctx.fillStyle = i === 0 ? 'rgba(255,140,50,0.8)' : 'rgba(255,255,255,0.7)';
+          ctx.beginPath(); ctx.arc(cx, cy, 6, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = 'rgba(200,200,200,0.4)'; ctx.lineWidth = 0.5;
+          ctx.beginPath(); ctx.moveTo(cx, cy + 2); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      drawProjectile(pos.x, pos.y, heat, trailPts);
+
+      // Transition to cinematic
+      if (t >= 1) {
+        if (elapsed > DUR_SPLASH + 1.5) {
+          animPhase = 'cinematic';
+          phaseStart = now;
+        }
+      }
+    }
+  }
+
+  // Outcome label
+  if (outcome === 'splash') {
+    outcomeEl.textContent = 'Splashdown!';
+    outcomeEl.className = 'splash';
+    outcomeEl.style.opacity = '';
+  } else if (outcome === 'burn') {
+    outcomeEl.textContent = 'Burned up!';
+    outcomeEl.className = 'burn';
+    outcomeEl.style.opacity = '';
+  } else if (outcome === 'skip') {
+    outcomeEl.textContent = 'Bounced off!';
+    outcomeEl.className = 'skip';
+    outcomeEl.style.opacity = '';
+  }
+
+  // Reset transform
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  requestAnimationFrame(loop);
+}
+
+function restart() {
+  fired = false; outcome = null; fireTime = 0;
+  animPhase = null; phaseStart = 0; trailPts = [];
+  burnDebris = null;
+  outcomeEl.className = ''; outcomeEl.style.opacity = '0';
+  enterBtn.disabled = false; enterBtn.textContent = 'Enter!';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function fire() {
+  if (fired) return;
+  fired = true; trailPts = []; outcome = null; burnDebris = null;
+  animPhase = 'approach';
+  phaseStart = performance.now();
+  fireTime = phaseStart;
+  enterBtn.disabled = true; enterBtn.textContent = '...';
+}
+
+angleSlider.addEventListener('input', () => {
+  angleValEl.textContent = getAngle().toFixed(1) + '\u00B0';
+  if (!fired) { enterBtn.disabled = false; enterBtn.textContent = 'Enter!'; }
+});
+
+enterBtn.addEventListener('click', fire);
+restartBtn.addEventListener('click', restart);
+
+loop();
+</script>
+<footer style="text-align:center;padding:10px 0 24px;color:#556;font-size:11px;">Designed and Created by SCRR | R360 | 2026</footer>
+</body>
+</html>

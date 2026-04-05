@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Part 2 — The Journey | Artemis II</title>
+<style>
+  :root {
+    --bg: #0b0e17;
+    --surface: #131829;
+    --border: #2a3050;
+    --text: #d4daf0;
+    --text-dim: #8890aa;
+    --accent: #4e9fff;
+    --accent2: #36d399;
+    --orange: #ff8844;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 17px;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+  .badge {
+    display: inline-block;
+    background: #2a5a9f;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  header h1 {
+    font-size: 2.2em;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  header .subtitle {
+    color: var(--text-dim);
+    font-size: 1.05em;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 1000px;
+    margin: 30px auto 0;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    border-radius: 12px;
+    background: #080b14;
+  }
+
+  #outcomeLabel {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 22px;
+    font-weight: 700;
+    padding: 10px 28px;
+    border-radius: 8px;
+    pointer-events: none;
+    transition: opacity 0.4s;
+    opacity: 0;
+    white-space: nowrap;
+  }
+  #outcomeLabel.success {
+    background: rgba(54, 211, 153, 0.15);
+    border: 1px solid rgba(54, 211, 153, 0.4);
+    color: #36d399;
+    opacity: 1;
+  }
+  #outcomeLabel.fail {
+    background: rgba(255, 60, 60, 0.2);
+    border: 1px solid rgba(255, 60, 60, 0.4);
+    color: #ff6666;
+    opacity: 1;
+  }
+
+  .controls {
+    max-width: 700px;
+    margin: 20px auto;
+    padding: 0 20px;
+    text-align: center;
+  }
+  .controls .fire-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  #restartBtn {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.2s, color 0.2s;
+  }
+  #restartBtn:hover { border-color: var(--text-dim); color: var(--text); }
+  #restartBtn:active { transform: scale(0.96); }
+  #boostBtn {
+    background: linear-gradient(135deg, #ff4422, #ff6644);
+    color: #fff;
+    border: none;
+    padding: 14px 50px;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s, box-shadow 0.2s;
+    box-shadow: 0 0 20px rgba(255, 68, 34, 0.3);
+  }
+  #boostBtn:hover { filter: brightness(1.15); transform: scale(1.04); box-shadow: 0 0 30px rgba(255, 68, 34, 0.5); }
+  #boostBtn:active { transform: scale(0.96); }
+  #boostBtn:disabled {
+    opacity: 0.3;
+    cursor: default;
+    filter: none;
+    transform: none;
+    box-shadow: none;
+  }
+  .hint {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 12px;
+  }
+
+  .explainer {
+    max-width: 660px;
+    margin: 40px auto;
+    padding: 0 20px 60px;
+  }
+  .explainer h2 {
+    font-size: 1.3em;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .explainer p {
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+  .callout {
+    background: var(--surface);
+    border-left: 4px solid var(--orange);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .callout strong { color: #fff; }
+
+  .phase-nav {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+  }
+  .phase-nav span { color: var(--text-dim); font-size: 14px; }
+  .phase-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .top-nav { max-width: 660px; margin: 0 auto; padding: 12px 20px 0; display: flex; justify-content: space-between; }
+  .top-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 22px; opacity: 0.7; transition: opacity 0.2s; }
+  .top-nav a:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <a href="phase1_why_things_orbit.html">&larr;</a>
+  <a href="part3_the_slingshot.html">&rarr;</a>
+</div>
+
+<header>
+  <div class="badge">Learn Astrophysics — Artemis II Mission</div>
+  <h1>Throwing to Where<br>the Moon Will Be</h1>
+  <p class="subtitle">You don't aim at the Moon.<br>You aim at where it's going to be.</p>
+</header>
+
+<div class="canvas-wrap">
+  <canvas id="sim"></canvas>
+  <div id="outcomeLabel"></div>
+</div>
+
+<div class="controls">
+  <button id="restartBtn">Restart</button>
+  <button id="boostBtn">Boost!</button>
+  <div class="hint">Watch the Moon. Time your burn.</div>
+</div>
+
+<div class="explainer">
+  <h2>What you're seeing</h2>
+  <p>Orion orbits Earth in a circle — the same orbit from Part 1. The Moon orbits too, further out, much slower.</p>
+  <p>The <strong>BOOST</strong> fires a burst of speed in the direction Orion is already moving. This stretches the circular orbit into a long ellipse — like pulling a rubber band.</p>
+  <p>The trick is <strong>timing</strong>. The boost always adds the same speed. But the ellipse shoots out in whatever direction Orion is heading at that moment. If the Moon happens to be there when the ellipse arrives — you're going to the Moon.</p>
+  <p>If not — you've launched into empty space. Lost.</p>
+
+  <div class="callout">
+    <strong>Artemis II:</strong> On April 2nd, mission controllers waited for exactly the right moment in Orion's orbit, then fired the ICPS upper stage for 18 minutes. The timing had to be precise — fire too early or too late, and the stretched orbit misses the Moon entirely. Like a quarterback throwing to where the receiver will be, not where they are now.
+  </div>
+</div>
+
+<div class="phase-nav">
+  <a href="phase1_why_things_orbit.html">&larr; Part 1: Why Things Orbit</a>
+  <span>Part 2 — The Journey</span>
+  <a href="part3_the_slingshot.html">Part 3: The Slingshot &rarr;</a>
+</div>
+
+<script>
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+const boostBtn = document.getElementById('boostBtn');
+const outcomeEl = document.getElementById('outcomeLabel');
+
+// --- Canvas sizing ---
+let W, H, dpr;
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = rect.width;
+  H = Math.min(W * 0.75, window.innerHeight * 0.65);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', () => { resize(); updateViewScale(); });
+
+// --- Scaled universe ---
+// Not to real scale — Moon is brought closer for visual clarity
+// Earth at centre, Orion LEO ~60px, Moon orbit ~220px
+const EARTH_PX = 150;       // Earth radius in pixels
+const LEO_PX = 185;         // Orion's orbit radius in pixels
+const MOON_ORBIT_PX = 840;  // Moon's orbit radius
+const MOON_PX = 48;         // Moon radius in pixels
+
+// Physics in pixel-space: we simulate using pixel coords with fake gravity
+// Orbital speed: v = sqrt(GM/r). We'll define GM so LEO_PX has a nice period
+const GM = 800;  // tuned so orbits look good
+const LEO_V = Math.sqrt(GM / LEO_PX);  // orbital speed at LEO
+const MOON_V = Math.sqrt(GM / MOON_ORBIT_PX); // Moon's orbital speed
+const BOOST_DV = LEO_V * 0.42; // ~42% speed boost — stretches orbit to Moon distance
+
+// View: scale everything so Earth + Moon orbit fits on screen
+// We need MOON_ORBIT_PX + MOON_PX + padding to fit within min(W,H)/2
+let VIEW_SCALE = 1;
+function updateViewScale() {
+  const needed = MOON_ORBIT_PX + MOON_PX + 30; // total radius needed
+  const available = Math.min(W, H) / 2;
+  VIEW_SCALE = available / needed;
+}
+
+// All positions get multiplied by VIEW_SCALE for drawing
+function cx() { return W / 2; }
+function cy() { return H / 2; }
+function s(px) { return px * VIEW_SCALE; } // scale a pixel distance
+
+// --- State ---
+let orionAngle = Math.PI / 2;  // start at top
+let moonAngle = -Math.PI / 4;  // start at lower-right
+let boosted = false;
+let boostTrail = [];
+let boostResult = null; // 'success' | 'fail' | null
+let resultTimer = 0;
+
+// Orion position & velocity (pixel coords, origin at Earth centre)
+let ox = 0, oy = 0, ovx = 0, ovy = 0;
+
+// Set Orion to circular orbit position
+function resetOrion() {
+  ox = LEO_PX * Math.cos(orionAngle);
+  oy = LEO_PX * Math.sin(orionAngle);
+  // Tangential velocity (perpendicular to radius, counter-clockwise)
+  ovx = -LEO_V * Math.sin(orionAngle);
+  ovy = LEO_V * Math.cos(orionAngle);
+}
+resetOrion();
+
+// --- Simulation ---
+function stepOrion(dt) {
+  if (!boosted) {
+    // Simple circular orbit — just advance angle
+    const angularV = LEO_V / LEO_PX;
+    orionAngle += angularV * dt;
+    ox = LEO_PX * Math.cos(orionAngle);
+    oy = LEO_PX * Math.sin(orionAngle);
+    ovx = -LEO_V * Math.sin(orionAngle);
+    ovy = LEO_V * Math.cos(orionAngle);
+  } else {
+    // Full gravity simulation after boost
+    const r = Math.sqrt(ox * ox + oy * oy);
+    if (r < EARTH_PX) {
+      // Crashed into Earth — shouldn't happen but safety
+      boosted = false;
+      boostResult = 'fail';
+      return;
+    }
+    const a = -GM / (r * r);
+    const ax = a * ox / r;
+    const ay = a * oy / r;
+    ovx += ax * dt;
+    ovy += ay * dt;
+    ox += ovx * dt;
+    oy += ovy * dt;
+
+    // Record trail
+    if (boostTrail.length === 0 ||
+        Math.hypot(ox - boostTrail[boostTrail.length-1].x, oy - boostTrail[boostTrail.length-1].y) > 2) {
+      boostTrail.push({ x: ox, y: oy });
+    }
+
+    // Check if reached Moon's neighbourhood
+    const moonX = MOON_ORBIT_PX * Math.cos(moonAngle);
+    const moonY = MOON_ORBIT_PX * Math.sin(moonAngle);
+    const distToMoon = Math.hypot(ox - moonX, oy - moonY);
+
+    if (distToMoon < MOON_PX * 4 && !boostResult) {
+      boostResult = 'success';
+      resultTimer = performance.now();
+    }
+
+    // Check if orbit is clearly missing — went far out and coming back
+    const distFromEarth = Math.sqrt(ox * ox + oy * oy);
+    const vr = (ox * ovx + oy * ovy) / distFromEarth; // radial velocity
+
+    // If past apogee and falling back without reaching Moon zone
+    if (!boostResult && boostTrail.length > 50 && vr < -0.2 && distFromEarth < MOON_ORBIT_PX * 0.6) {
+      boostResult = 'fail';
+      resultTimer = performance.now();
+    }
+
+    // If way too far out (escaped)
+    if (distFromEarth > MOON_ORBIT_PX * 2 && !boostResult) {
+      boostResult = 'fail';
+      resultTimer = performance.now();
+    }
+  }
+}
+
+function stepMoon(dt) {
+  const angularV = MOON_V / MOON_ORBIT_PX;
+  moonAngle += angularV * dt;
+}
+
+// --- Drawing ---
+function drawStars() {
+  for (let i = 0; i < 100; i++) {
+    const sx = (i * 137.5 + 50) % W;
+    const sy = (i * 97.3 + 30) % H;
+    ctx.fillStyle = `rgba(200,210,240,${0.15 + (i % 7) * 0.05})`;
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+}
+
+function drawEarth() {
+  const x = cx(), y = cy();
+  const r = s(EARTH_PX);
+
+  // Atmosphere glow
+  const glow = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * 1.3);
+  glow.addColorStop(0, 'rgba(100,180,255,0.1)');
+  glow.addColorStop(1, 'rgba(100,180,255,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(x, y, r * 1.3, 0, Math.PI * 2); ctx.fill();
+
+  // Body
+  const eg = ctx.createRadialGradient(x - r * 0.15, y - r * 0.15, r * 0.05, x, y, r);
+  eg.addColorStop(0, '#4a9edd');
+  eg.addColorStop(0.5, '#3580bb');
+  eg.addColorStop(1, '#1d4a70');
+  ctx.fillStyle = eg;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+  // Landmasses
+  if (r > 10) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.98, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = 'rgba(45, 120, 60, 0.45)';
+    const lands = [
+      { a: 70, d: 0.4, rx: 0.35, ry: 0.2, rot: 10 },
+      { a: 110, d: 0.35, rx: 0.15, ry: 0.2, rot: -5 },
+      { a: 50, d: 0.5, rx: 0.25, ry: 0.12, rot: 20 },
+    ];
+    for (const l of lands) {
+      const ar = l.a * Math.PI / 180;
+      const lx = x + Math.cos(ar) * r * l.d;
+      const ly = y - Math.sin(ar) * r * l.d;
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, r * l.rx, r * l.ry, l.rot * Math.PI / 180, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Label
+  if (r > 15) {
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = `${Math.max(9, Math.min(14, r * 0.12))}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Earth', x, y + 4);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawMoonOrbit() {
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 8]);
+  ctx.beginPath();
+  ctx.arc(cx(), cy(), s(MOON_ORBIT_PX), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawMoon() {
+  const mr = s(MOON_PX);
+  const x = cx() + s(MOON_ORBIT_PX) * Math.cos(moonAngle);
+  const y = cy() - s(MOON_ORBIT_PX) * Math.sin(moonAngle);
+
+  // Glow
+  const glow = ctx.createRadialGradient(x, y, mr * 0.5, x, y, mr * 3);
+  glow.addColorStop(0, 'rgba(220,220,230,0.12)');
+  glow.addColorStop(1, 'rgba(220,220,230,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(x, y, mr * 3, 0, Math.PI * 2); ctx.fill();
+
+  // Body
+  const mg = ctx.createRadialGradient(x - mr * 0.2, y - mr * 0.2, mr * 0.1, x, y, mr);
+  mg.addColorStop(0, '#d5d5da');
+  mg.addColorStop(0.5, '#b0b0b8');
+  mg.addColorStop(1, '#808088');
+  ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.arc(x, y, mr, 0, Math.PI * 2); ctx.fill();
+
+  // Craters (subtle)
+  if (mr > 5) {
+    ctx.fillStyle = 'rgba(100,100,110,0.3)';
+    ctx.beginPath(); ctx.arc(x - mr * 0.15, y - mr * 0.1, mr * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + mr * 0.2, y + mr * 0.15, mr * 0.15, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Label
+  if (mr > 5) {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = `${Math.max(9, Math.min(13, mr * 0.4))}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Moon', x, y + mr + 14);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawLEOOrbit() {
+  ctx.strokeStyle = 'rgba(78, 159, 255, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx(), cy(), s(LEO_PX), 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawOrion() {
+  const x = cx() + s(ox);
+  const y = cy() - s(oy);  // flip y
+
+  // Trail (after boost)
+  if (boosted && boostTrail.length > 1) {
+    for (let i = 1; i < boostTrail.length; i++) {
+      const p0x = cx() + s(boostTrail[i-1].x);
+      const p0y = cy() - s(boostTrail[i-1].y);
+      const p1x = cx() + s(boostTrail[i].x);
+      const p1y = cy() - s(boostTrail[i].y);
+      const progress = i / boostTrail.length;
+      const alpha = 0.15 + 0.5 * (1 - progress * 0.3);
+
+      ctx.strokeStyle = boostResult === 'success'
+        ? `rgba(54,211,153,${alpha})`
+        : `rgba(255,136,68,${alpha})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(p0x, p0y);
+      ctx.lineTo(p1x, p1y);
+      ctx.stroke();
+    }
+  }
+
+  // Orion dot
+  const dotColor = boosted
+    ? (boostResult === 'success' ? '#36d399' : '#ff8844')
+    : '#4e9fff';
+
+  // Glow
+  const glow = ctx.createRadialGradient(x, y, 0, x, y, 14);
+  glow.addColorStop(0, dotColor + '44');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+
+  // Dot
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = dotColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.stroke();
+
+  // Label (only in orbit mode)
+  if (!boosted) {
+    ctx.fillStyle = '#4e9fff';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Orion', x, y - 12);
+    ctx.textAlign = 'left';
+  }
+}
+
+// --- Boost effect flash ---
+let boostFlashT = -1;
+
+function drawBoostFlash() {
+  if (boostFlashT < 0) return;
+  const elapsed = (performance.now() - boostFlashT) / 1000;
+  if (elapsed > 0.8) { boostFlashT = -1; return; }
+
+  const x = cx() + s(ox);
+  const y = cy() - s(oy);
+  const alpha = (1 - elapsed / 0.8) * 0.7;
+  const r = 8 + elapsed * 30;
+
+  const flash = ctx.createRadialGradient(x, y, 0, x, y, r);
+  flash.addColorStop(0, `rgba(255,200,100,${alpha})`);
+  flash.addColorStop(0.4, `rgba(255,120,50,${alpha * 0.5})`);
+  flash.addColorStop(1, 'rgba(255,80,30,0)');
+  ctx.fillStyle = flash;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+}
+
+// --- Main loop ---
+let lastTime = performance.now();
+
+function loop() {
+  const now = performance.now();
+  const rawDt = (now - lastTime) / 1000;
+  lastTime = now;
+  const dt = Math.min(rawDt, 0.05); // cap dt
+
+  // Simulation speed: fast and exciting
+  const simDt = dt * 45;
+
+  stepMoon(simDt);
+  stepOrion(simDt);
+
+  // After result, wait then reset
+  if (boostResult && resultTimer > 0) {
+    const elapsed = (now - resultTimer) / 1000;
+    if (elapsed > 5) {
+      // Reset
+      boosted = false;
+      boostResult = null;
+      resultTimer = 0;
+      boostTrail = [];
+      orionAngle = Math.PI / 2;
+      resetOrion();
+      outcomeEl.className = '';
+      outcomeEl.style.opacity = '0';
+      boostBtn.disabled = false;
+      boostBtn.textContent = 'Boost!';
+    }
+  }
+
+  // --- Draw ---
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#080b14';
+  ctx.fillRect(0, 0, W, H);
+
+  drawStars();
+  drawMoonOrbit();
+  drawMoon();
+  drawLEOOrbit();
+  drawEarth();
+  drawOrion();
+  drawBoostFlash();
+
+  // Outcome label
+  if (boostResult === 'success') {
+    outcomeEl.textContent = 'Going to the Moon!';
+    outcomeEl.className = 'success';
+    outcomeEl.style.opacity = '';
+  } else if (boostResult === 'fail') {
+    outcomeEl.textContent = 'Lost in Space!';
+    outcomeEl.className = 'fail';
+    outcomeEl.style.opacity = '';
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// --- Boost button ---
+function boost() {
+  if (boosted) return;
+
+  boosted = true;
+  boostResult = null;
+  boostTrail = [];
+  resultTimer = 0;
+
+  // Add speed in the direction Orion is currently moving (tangential)
+  const speed = Math.sqrt(ovx * ovx + ovy * ovy);
+  const dirX = ovx / speed;
+  const dirY = ovy / speed;
+  ovx += dirX * BOOST_DV;
+  ovy += dirY * BOOST_DV;
+
+  // Flash effect
+  boostFlashT = performance.now();
+
+  // Disable button
+  boostBtn.disabled = true;
+  boostBtn.textContent = '...';
+
+  // Re-enable after result + reset (handled in loop)
+}
+
+boostBtn.addEventListener('click', boost);
+
+const restartBtn = document.getElementById('restartBtn');
+restartBtn.addEventListener('click', () => {
+  boosted = false;
+  boostResult = null;
+  resultTimer = 0;
+  boostTrail = [];
+  orionAngle = Math.PI / 2;
+  resetOrion();
+  outcomeEl.className = '';
+  outcomeEl.style.opacity = '0';
+  boostBtn.disabled = false;
+  boostBtn.textContent = 'Boost!';
+});
+
+// Init view scale and start
+updateViewScale();
+loop();
+</script>
+<footer style="text-align:center;padding:10px 0 24px;color:#556;font-size:11px;">Designed and Created by SCRR | R360 | 2026</footer>
+</body>
+</html>

@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Part 3 — The Slingshot | Artemis II</title>
+<style>
+  :root {
+    --bg: #0b0e17;
+    --surface: #131829;
+    --border: #2a3050;
+    --text: #d4daf0;
+    --text-dim: #8890aa;
+    --accent: #4e9fff;
+    --accent2: #36d399;
+    --orange: #ff8844;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 17px;
+    overflow-x: hidden;
+  }
+  header { text-align: center; padding: 40px 20px 20px; }
+  .badge {
+    display: inline-block; background: #2a5a9f; color: #fff; font-size: 11px;
+    font-weight: 700; padding: 3px 10px; border-radius: 12px;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+  header h1 { font-size: 2.2em; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  header .subtitle { color: var(--text-dim); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+
+  .canvas-wrap { position: relative; width: 100%; max-width: 1000px; margin: 30px auto 0; }
+  canvas { display: block; width: 100%; border-radius: 12px; background: #080b14; }
+
+  #outcomeLabel {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    font-size: 22px; font-weight: 700; padding: 10px 28px; border-radius: 8px;
+    pointer-events: none; transition: opacity 0.4s; opacity: 0; white-space: nowrap;
+  }
+  #outcomeLabel.home { background: rgba(54,211,153,0.15); border: 1px solid rgba(54,211,153,0.4); color: #36d399; opacity: 1; }
+  #outcomeLabel.crash { background: rgba(255,60,60,0.2); border: 1px solid rgba(255,60,60,0.4); color: #ff6666; opacity: 1; }
+  #outcomeLabel.drift { background: rgba(169,127,255,0.15); border: 1px solid rgba(169,127,255,0.4); color: #a97fff; opacity: 1; }
+
+  .controls { max-width: 700px; margin: 20px auto; padding: 0 20px; }
+  .speed-row { display: flex; align-items: center; gap: 14px; }
+  .speed-row label { font-size: 15px; color: var(--text-dim); white-space: nowrap; }
+  .speed-row input[type="range"] { flex: 1; accent-color: var(--accent); height: 6px; }
+  .speed-row .speed-val {
+    font-family: 'SF Mono','Fira Code',monospace; font-size: 16px;
+    color: var(--orange); min-width: 100px; text-align: right;
+  }
+  .fire-row { display: flex; justify-content: center; gap: 14px; margin-top: 14px; }
+  #restartBtn {
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+    padding: 12px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: transform 0.1s, border-color 0.2s, color 0.2s;
+  }
+  #restartBtn:hover { border-color: var(--text-dim); color: var(--text); }
+  #restartBtn:active { transform: scale(0.96); }
+  #flybyBtn {
+    background: linear-gradient(135deg, #cc8800, #eebb33);
+    color: #fff; border: none; padding: 14px 44px; border-radius: 10px;
+    font-size: 20px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase;
+    cursor: pointer; transition: transform 0.1s, filter 0.1s, box-shadow 0.2s;
+    box-shadow: 0 0 20px rgba(238,187,51,0.3);
+  }
+  #flybyBtn:hover { filter: brightness(1.15); transform: scale(1.04); }
+  #flybyBtn:active { transform: scale(0.96); }
+  #flybyBtn:disabled { opacity: 0.3; cursor: default; filter: none; transform: none; box-shadow: none; }
+  .hint { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 10px; }
+
+  .explainer { max-width: 660px; margin: 40px auto; padding: 0 20px 60px; }
+  .explainer h2 { font-size: 1.3em; color: #fff; margin-bottom: 12px; }
+  .explainer p { margin-bottom: 14px; }
+  .callout {
+    background: var(--surface); border-left: 4px solid var(--orange);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; font-size: 15px;
+  }
+  .callout strong { color: #fff; }
+
+  .phase-nav {
+    max-width: 660px; margin: 0 auto; padding: 20px 20px 40px;
+    display: flex; justify-content: space-between; border-top: 1px solid var(--border);
+  }
+  .phase-nav span { color: var(--text-dim); font-size: 14px; }
+  .phase-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .top-nav { max-width: 660px; margin: 0 auto; padding: 12px 20px 0; display: flex; justify-content: space-between; }
+  .top-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 22px; opacity: 0.7; transition: opacity 0.2s; }
+  .top-nav a:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <a href="part2_the_journey.html">&larr;</a>
+  <a href="part4_hitting_the_bullseye.html">&rarr;</a>
+</div>
+
+<header>
+  <div class="badge">Learn Astrophysics — Artemis II Mission</div>
+  <h1>The Slingshot</h1>
+  <p class="subtitle">The Moon's gravity bends Orion's path<br>and flings it home. No engine needed.</p>
+</header>
+
+<div class="canvas-wrap">
+  <canvas id="sim"></canvas>
+  <div id="outcomeLabel"></div>
+</div>
+
+<div class="controls">
+  <div class="speed-row">
+    <label for="distSlider">Flyby distance:</label>
+    <input type="range" id="distSlider" min="20" max="400" value="120" step="5">
+    <span class="speed-val" id="distVal">120 km</span>
+  </div>
+  <div class="fire-row">
+    <button id="restartBtn">Restart</button>
+    <button id="flybyBtn">Fly by!</button>
+  </div>
+  <div class="hint">How close should Orion pass? Too close — crash. Too far — drift away. Find the sweet spot.</div>
+</div>
+
+<div class="explainer">
+  <h2>What you're seeing</h2>
+  <p>Orion arrives from Earth (left side) heading toward the Moon. As it gets close, the Moon's gravity grabs it and bends the trajectory.</p>
+  <p>The closer Orion passes, the <strong>sharper the bend</strong>. Think of it like rolling a ball past a drain — the closer to the drain, the more the ball curves toward it.</p>
+  <p>At the right distance, gravity bends the path just enough to loop around the far side of the Moon and redirect Orion back toward Earth. This is the <strong>free-return trajectory</strong> — the most elegant safety net in spaceflight.</p>
+  <p>If every engine on Orion fails after the TLI burn, the crew still comes home. The Moon does all the steering.</p>
+
+  <div class="callout">
+    <strong>Artemis II:</strong> The flyby distance was chosen to be approximately 8,890 km above the Moon's surface — precisely calculated to produce the right deflection angle. This sends Orion on a path whose return trajectory lines up exactly with Earth's atmosphere. Apollo 13's crew survived because this same principle brought them home when their engines were crippled.
+  </div>
+</div>
+
+<div class="phase-nav">
+  <a href="part2_the_journey.html">&larr; Part 2: The Journey</a>
+  <span>Part 3 — The Slingshot</span>
+  <a href="part4_hitting_the_bullseye.html">Part 4: Hitting the Bullseye &rarr;</a>
+</div>
+
+<script>
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+const distSlider = document.getElementById('distSlider');
+const distValEl = document.getElementById('distVal');
+const flybyBtn = document.getElementById('flybyBtn');
+const restartBtn = document.getElementById('restartBtn');
+const outcomeEl = document.getElementById('outcomeLabel');
+
+let W, H, dpr;
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = rect.width;
+  H = Math.min(W * 0.7, window.innerHeight * 0.6);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// --- Scene layout (pixel space) ---
+const MOON_PX = 55;           // Moon radius
+const MOON_X = W * 0.55;      // Moon position — right of centre
+const MOON_Y_FRAC = 0.48;     // fraction of H
+
+// Earth indicator — small dot far left
+const EARTH_PX = 12;
+
+// Physics constants (pixel-space gravity)
+const GM_MOON = 120;   // tuned: crash <250, home 250-380, drift 390+
+const APPROACH_SPEED = 0.7; // pixels per sim-step — slow and dramatic
+
+// --- State ---
+let fired = false;
+let trail = [];
+let outcome = null; // 'home' | 'crash' | 'drift'
+let resultTimer = 0;
+
+// Orion position & velocity
+let ox, oy, ovx, ovy;
+
+// Slider value mapped to flyby distance in pixels (from Moon surface)
+function flybyPx() {
+  // Slider 20..400 maps to ~10px..180px from Moon surface
+  return 10 + (parseInt(distSlider.value) - 20) / 380 * 170;
+}
+
+function getMoonY() { return H * MOON_Y_FRAC; }
+function getMoonX() { return Math.min(W * 0.6, W - MOON_PX - 60); }
+
+// Set Orion to starting position — approaching horizontally from the left,
+// passing ABOVE the Moon. Slider controls how far above.
+function resetOrion() {
+  const my = getMoonY();
+  const mx = getMoonX();
+  const dist = MOON_PX + flybyPx(); // distance from Moon centre
+
+  // Start off-screen left, at the same height as the flyby point (above Moon)
+  ox = -40;
+  oy = my - dist; // above Moon centre by 'dist' pixels
+
+  // Velocity: purely horizontal — heading right toward the Moon
+  ovx = APPROACH_SPEED;
+  ovy = 0;
+}
+
+resetOrion();
+
+// --- Simulation ---
+function stepOrion() {
+  if (!fired) return;
+
+  const mx = getMoonX();
+  const my = getMoonY();
+
+  // Gravity from Moon
+  const dx = mx - ox;
+  const dy = my - oy;
+  const r = Math.sqrt(dx * dx + dy * dy);
+
+  // Crash check
+  if (r < MOON_PX) {
+    outcome = 'crash';
+    resultTimer = performance.now();
+    return;
+  }
+
+  const a = GM_MOON / (r * r);
+  ovx += a * dx / r;
+  ovy += a * dy / r;
+  ox += ovx;
+  oy += ovy;
+
+  // Record trail
+  trail.push({ x: ox, y: oy });
+
+  // Check outcomes
+  // Gone home: passed Moon and heading strongly leftward (back toward Earth)
+  if (ox < mx - 50 && ovx < -0.3 && trail.length > 200) {
+    if (!outcome) {
+      outcome = 'home';
+      resultTimer = performance.now();
+    }
+  }
+
+  // Drifting away: far from Moon and not heading back
+  if (trail.length > 500 && !outcome) {
+    const distFromMoon = Math.sqrt((ox - mx) ** 2 + (oy - my) ** 2);
+    if (distFromMoon > MOON_PX * 10) {
+      outcome = 'drift';
+      resultTimer = performance.now();
+    }
+  }
+
+  // Definitely far away — check if heading home or drifting
+  if (trail.length > 50 && !outcome) {
+    const farAway = ox > W + 400 || oy > H + 400 || oy < -400 || ox < -600;
+    if (farAway) {
+      if (ovx < 0) {
+        outcome = 'home';
+      } else {
+        outcome = 'drift';
+      }
+      resultTimer = performance.now();
+    }
+  }
+}
+
+// --- Camera system ---
+// camScale: 1 = normal view (Moon area), <1 = zoomed out to show Earth+Moon
+// camCX/camCY: camera centre in world coords
+let camScale = 1;
+let camCX = 0; // will be computed
+let camCY = 0;
+let targetScale = 1;
+let targetCX = 0;
+let targetCY = 0;
+
+function updateCamera() {
+  if (outcome === 'home') {
+    // Zoom out to show Earth, Moon, and the return trail
+    // Need to fit from x=-50 (Earth) to getMoonX()+MOON_PX (Moon right edge)
+    // and all trail points
+    const mx = getMoonX();
+    const totalWidth = mx + MOON_PX + 100; // Earth to Moon + padding
+    targetScale = Math.min(1, W / (totalWidth * 1.2));
+    targetCX = (mx + 50) / 2; // centre between Earth and Moon
+    targetCY = getMoonY();
+  } else {
+    targetScale = 1;
+    targetCX = W / 2;
+    targetCY = H / 2;
+  }
+
+  // Smooth lerp
+  camScale += (targetScale - camScale) * 0.03;
+  camCX += (targetCX - camCX) * 0.03;
+  camCY += (targetCY - camCY) * 0.03;
+}
+
+// Transform world coords to screen coords through camera
+function toScreen(wx, wy) {
+  return {
+    x: W / 2 + (wx - camCX) * camScale,
+    y: H / 2 + (wy - camCY) * camScale
+  };
+}
+function scaleR(r) { return r * camScale; }
+
+// --- Drawing ---
+function drawStars() {
+  for (let i = 0; i < 120; i++) {
+    const sx = (i * 137.5 + 50) % W;
+    const sy = (i * 97.3 + 30) % H;
+    ctx.fillStyle = `rgba(200,210,240,${0.12 + (i % 7) * 0.05})`;
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+}
+
+function drawEarth() {
+  const s = toScreen(35, getMoonY());
+  const r = scaleR(EARTH_PX);
+
+  const glow = ctx.createRadialGradient(s.x, s.y, r * 0.5, s.x, s.y, r * 3);
+  glow.addColorStop(0, 'rgba(100,180,255,0.15)');
+  glow.addColorStop(1, 'rgba(100,180,255,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r * 3, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = '#4a9edd';
+  ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(r, 2), 0, Math.PI * 2); ctx.fill();
+
+  if (r > 3) {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = `${Math.max(8, Math.min(11, r * 0.8))}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Earth', s.x, s.y + r + 12);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawMoon() {
+  const s = toScreen(getMoonX(), getMoonY());
+  const r = scaleR(MOON_PX);
+
+  // Glow
+  const glow = ctx.createRadialGradient(s.x, s.y, r * 0.8, s.x, s.y, r * 1.6);
+  glow.addColorStop(0, 'rgba(220,220,230,0.08)');
+  glow.addColorStop(1, 'rgba(220,220,230,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r * 1.6, 0, Math.PI * 2); ctx.fill();
+
+  // Body — base grey
+  const mg = ctx.createRadialGradient(s.x - r * 0.2, s.y - r * 0.2, r * 0.05, s.x, s.y, r);
+  mg.addColorStop(0, '#d0d0d5');
+  mg.addColorStop(0.4, '#b8b8be');
+  mg.addColorStop(0.8, '#9a9aa2');
+  mg.addColorStop(1, '#707078');
+  ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI * 2); ctx.fill();
+
+  // Craters — clipped to Moon
+  ctx.save();
+  ctx.beginPath(); ctx.arc(s.x, s.y, r * 0.98, 0, Math.PI * 2); ctx.clip();
+
+  const craters = [
+    // Large craters
+    { dx: -0.25, dy: -0.3, r: 0.22, depth: 0.12 },
+    { dx: 0.3, dy: 0.15, r: 0.18, depth: 0.10 },
+    { dx: -0.1, dy: 0.35, r: 0.15, depth: 0.08 },
+    { dx: 0.35, dy: -0.25, r: 0.12, depth: 0.09 },
+    // Medium craters
+    { dx: -0.4, dy: 0.05, r: 0.1, depth: 0.07 },
+    { dx: 0.05, dy: -0.15, r: 0.09, depth: 0.06 },
+    { dx: 0.2, dy: 0.4, r: 0.11, depth: 0.07 },
+    { dx: -0.3, dy: -0.05, r: 0.08, depth: 0.05 },
+    // Small craters
+    { dx: 0.15, dy: -0.4, r: 0.06, depth: 0.04 },
+    { dx: -0.15, dy: 0.15, r: 0.05, depth: 0.04 },
+    { dx: 0.4, dy: -0.05, r: 0.05, depth: 0.03 },
+    { dx: -0.35, dy: 0.3, r: 0.04, depth: 0.03 },
+    { dx: 0.1, dy: 0.2, r: 0.04, depth: 0.03 },
+    { dx: -0.05, dy: -0.4, r: 0.05, depth: 0.04 },
+    { dx: 0.25, dy: -0.1, r: 0.03, depth: 0.02 },
+  ];
+
+  for (const c of craters) {
+    const ccx = s.x + c.dx * r;
+    const ccy = s.y + c.dy * r;
+    const cr = c.r * r;
+
+    ctx.fillStyle = `rgba(60,60,68,${c.depth})`;
+    ctx.beginPath(); ctx.arc(ccx, ccy, cr, 0, Math.PI * 2); ctx.fill();
+
+    if (cr > 1) {
+      ctx.strokeStyle = `rgba(180,180,190,${c.depth * 0.8})`;
+      ctx.lineWidth = Math.max(0.5, cr * 0.15);
+      ctx.beginPath();
+      ctx.arc(ccx, ccy, cr * 0.9, Math.PI * 0.8, Math.PI * 1.8);
+      ctx.stroke();
+
+      ctx.fillStyle = `rgba(50,50,58,${c.depth * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(ccx - cr * 0.15, ccy - cr * 0.15, cr * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+
+  // Moon label
+  if (r > 8) {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = `${Math.max(9, Math.min(13, r * 0.22))}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Moon', s.x, s.y + r + 16);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawPreview() {
+  if (fired) return;
+
+  const my = getMoonY();
+  const mx = getMoonX();
+  const dist = MOON_PX + flybyPx();
+
+  const s0 = toScreen(-10, my - dist);
+  const s1 = toScreen(Math.min(mx * 0.3, 180), my - dist);
+
+  ctx.strokeStyle = 'rgba(255,136,68,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(s0.x, s0.y);
+  ctx.lineTo(s1.x, s1.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(255,136,68,0.5)';
+  ctx.beginPath(); ctx.arc(s1.x, s1.y, 3, 0, Math.PI * 2); ctx.fill();
+
+  // Distance indicator
+  if (dist < MOON_PX * 5) {
+    const sm1 = toScreen(mx, my - MOON_PX);
+    const sm2 = toScreen(mx, my - dist);
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    ctx.moveTo(sm1.x, sm1.y);
+    ctx.lineTo(sm2.x, sm2.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawTrail() {
+  if (trail.length < 2) return;
+
+  for (let i = 1; i < trail.length; i++) {
+    const s0 = toScreen(trail[i-1].x, trail[i-1].y);
+    const s1 = toScreen(trail[i].x, trail[i].y);
+    const progress = i / trail.length;
+    const alpha = 0.2 + 0.6 * (1 - progress * 0.3);
+    const color = outcome === 'home'
+      ? `rgba(54,211,153,${alpha})`
+      : outcome === 'crash'
+        ? `rgba(255,100,50,${alpha})`
+        : `rgba(255,136,68,${alpha})`;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(s0.x, s0.y);
+    ctx.lineTo(s1.x, s1.y);
+    ctx.stroke();
+  }
+}
+
+function drawOrion() {
+  if (!fired && trail.length === 0) {
+    const my = getMoonY();
+    const dist = MOON_PX + flybyPx();
+    const s = toScreen(50, my - dist);
+
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ff8844';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.stroke();
+
+    ctx.fillStyle = '#ff8844';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText('Orion', s.x + 8, s.y - 6);
+    return;
+  }
+
+  if (!fired) return;
+
+  const s = toScreen(ox, oy);
+  const dotColor = outcome === 'home' ? '#36d399'
+    : outcome === 'crash' ? '#ff5544' : '#ff8844';
+
+  const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 16);
+  glow.addColorStop(0, dotColor + '44');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(s.x, s.y, 16, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = dotColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.stroke();
+}
+
+function drawCrashEffect() {
+  if (outcome !== 'crash' || !resultTimer) return;
+  const elapsed = (performance.now() - resultTimer) / 1000;
+  if (elapsed > 2) return;
+
+  const t = Math.min(1, elapsed / 1.5);
+  const rawPt = trail[trail.length - 1] || { x: ox, y: oy };
+  const lastPt = toScreen(rawPt.x, rawPt.y);
+
+  // Flash
+  if (t < 0.3) {
+    const flashAlpha = (1 - t / 0.3) * 0.8;
+    const flashR = 5 + t * 60;
+    const flash = ctx.createRadialGradient(lastPt.x, lastPt.y, 0, lastPt.x, lastPt.y, flashR);
+    flash.addColorStop(0, `rgba(255,220,150,${flashAlpha})`);
+    flash.addColorStop(0.4, `rgba(255,150,50,${flashAlpha * 0.6})`);
+    flash.addColorStop(1, 'rgba(255,80,30,0)');
+    ctx.fillStyle = flash;
+    ctx.beginPath(); ctx.arc(lastPt.x, lastPt.y, flashR, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Debris
+  if (!trail._debris) {
+    trail._debris = [];
+    for (let i = 0; i < 10; i++) {
+      trail._debris.push({
+        angle: Math.random() * Math.PI * 2,
+        spd: 0.5 + Math.random() * 2,
+        size: 1 + Math.random() * 2,
+        r: 180 + Math.floor(Math.random() * 75),
+        g: 80 + Math.floor(Math.random() * 80),
+        b: 20 + Math.floor(Math.random() * 40),
+      });
+    }
+  }
+  for (const d of trail._debris) {
+    const dist = d.spd * t * 50;
+    const dx = lastPt.x + Math.cos(d.angle) * dist;
+    const dy = lastPt.y + Math.sin(d.angle) * dist;
+    const alpha = (1 - t) * 0.9;
+    ctx.fillStyle = `rgba(${d.r},${d.g},${d.b},${alpha})`;
+    ctx.beginPath(); ctx.arc(dx, dy, d.size * (1 - t * 0.5), 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// --- Cinematic return animation ---
+// Cockpit POV: looking forward as Earth grows larger
+let cinematicStars = null;
+
+function drawCinematicReturn(t) {
+  // t goes from 0 to ~7 seconds
+  const progress = Math.min(1, t / 6); // 0 to 1 over 6 seconds
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Deep space background — gets slightly lighter as Earth approaches
+  const bgBright = Math.floor(8 + progress * 4);
+  ctx.fillStyle = `rgb(${bgBright},${bgBright + 2},${bgBright + 8})`;
+  ctx.fillRect(0, 0, W, H);
+
+  // Streaming stars — move outward from centre (parallax effect)
+  if (!cinematicStars) {
+    cinematicStars = [];
+    for (let i = 0; i < 60; i++) {
+      cinematicStars.push({
+        angle: Math.random() * Math.PI * 2,
+        dist: 0.1 + Math.random() * 0.9, // start distance from centre (0-1)
+        speed: 0.3 + Math.random() * 0.7,
+        brightness: 0.3 + Math.random() * 0.7,
+        size: 0.5 + Math.random() * 1.5,
+      });
+    }
+  }
+
+  for (const star of cinematicStars) {
+    // Stars stream outward from centre
+    let d = star.dist + t * star.speed * 0.08;
+    d = d % 1.2; // wrap around
+    const sx = W / 2 + Math.cos(star.angle) * d * W * 0.7;
+    const sy = H / 2 + Math.sin(star.angle) * d * H * 0.7;
+    const alpha = star.brightness * Math.min(1, d * 3) * (1 - progress * 0.5);
+    const sz = star.size * (0.5 + d);
+
+    if (sx > -10 && sx < W + 10 && sy > -10 && sy < H + 10) {
+      // Star streak — elongated in radial direction
+      const streakLen = Math.min(8, star.speed * 3 * (0.5 + progress));
+      const dx = Math.cos(star.angle) * streakLen;
+      const dy = Math.sin(star.angle) * streakLen;
+      ctx.strokeStyle = `rgba(200,210,240,${alpha})`;
+      ctx.lineWidth = sz * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(sx - dx, sy - dy);
+      ctx.lineTo(sx + dx, sy + dy);
+      ctx.stroke();
+    }
+  }
+
+  // Earth — grows from small dot to large sphere
+  const earthR = 5 + progress * progress * Math.min(W, H) * 0.5;
+  const earthX = W / 2;
+  const earthY = H / 2;
+
+  // Atmosphere glow — gets bigger and more prominent as Earth grows
+  if (earthR > 10) {
+    const glowR = earthR * 1.15;
+    const glow = ctx.createRadialGradient(earthX, earthY, earthR * 0.85, earthX, earthY, glowR);
+    glow.addColorStop(0, `rgba(100,180,255,${0.1 + progress * 0.15})`);
+    glow.addColorStop(1, 'rgba(100,180,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(earthX, earthY, glowR, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Earth body
+  const eg = ctx.createRadialGradient(
+    earthX - earthR * 0.2, earthY - earthR * 0.2, earthR * 0.05,
+    earthX, earthY, earthR
+  );
+  eg.addColorStop(0, '#5aaeee');
+  eg.addColorStop(0.3, '#3a8ecc');
+  eg.addColorStop(0.7, '#2a6eaa');
+  eg.addColorStop(1, '#1a4a70');
+  ctx.fillStyle = eg;
+  ctx.beginPath(); ctx.arc(earthX, earthY, earthR, 0, Math.PI * 2); ctx.fill();
+
+  // Landmasses — only when big enough
+  if (earthR > 30) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(earthX, earthY, earthR * 0.98, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = `rgba(45,120,60,${Math.min(0.5, progress * 0.8)})`;
+    const lands = [
+      { a: 70, d: 0.4, rx: 0.35, ry: 0.22, rot: 10 },
+      { a: 110, d: 0.35, rx: 0.15, ry: 0.2, rot: -5 },
+      { a: 50, d: 0.5, rx: 0.25, ry: 0.12, rot: 20 },
+      { a: 130, d: 0.25, rx: 0.12, ry: 0.15, rot: -15 },
+    ];
+    for (const l of lands) {
+      const ar = l.a * Math.PI / 180;
+      const lx = earthX + Math.cos(ar) * earthR * l.d;
+      const ly = earthY - Math.sin(ar) * earthR * l.d;
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, earthR * l.rx, earthR * l.ry, l.rot * Math.PI / 180, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Cloud wisps — subtle white arcs when large
+  if (earthR > 80) {
+    ctx.strokeStyle = `rgba(255,255,255,${0.06 * progress})`;
+    ctx.lineWidth = earthR * 0.02;
+    for (let i = 0; i < 4; i++) {
+      const ca = (i * 1.3 + 0.5);
+      const cr = earthR * (0.5 + i * 0.1);
+      ctx.beginPath();
+      ctx.arc(earthX, earthY, cr, ca, ca + 0.8);
+      ctx.stroke();
+    }
+  }
+}
+
+// --- Cinematic drift animation ---
+// POV: watching Orion shrink into the void
+function drawCinematicDrift(t) {
+  const progress = Math.min(1, t / 6);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background gets darker and darker
+  const bg = Math.max(2, Math.floor(8 - progress * 6));
+  ctx.fillStyle = `rgb(${bg},${bg},${Math.floor(bg * 1.3)})`;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars — slowly fade out (loneliness)
+  const starAlpha = (1 - progress * 0.8);
+  for (let i = 0; i < 80; i++) {
+    const sx = (i * 137.5 + 50) % W;
+    const sy = (i * 97.3 + 30) % H;
+    ctx.fillStyle = `rgba(200,210,240,${0.1 * starAlpha + (i % 5) * 0.03 * starAlpha})`;
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  // Orion — small dot that shrinks and fades into nothing
+  const dotSize = Math.max(0.5, 4 * (1 - progress * 0.9));
+  const dotAlpha = 1 - progress * 0.95;
+  const dotX = W / 2 + progress * W * 0.15; // drifts slightly right
+  const dotY = H / 2 - progress * H * 0.1;  // drifts slightly up
+
+  // Fading glow
+  if (dotAlpha > 0.05) {
+    const glowR = 12 * (1 - progress * 0.5);
+    const glow = ctx.createRadialGradient(dotX, dotY, 0, dotX, dotY, glowR);
+    glow.addColorStop(0, `rgba(255,136,68,${dotAlpha * 0.3})`);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(dotX, dotY, glowR, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = `rgba(255,255,255,${dotAlpha})`;
+    ctx.beginPath(); ctx.arc(dotX, dotY, dotSize, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Text fades in — "..."
+  if (progress > 0.4) {
+    const textAlpha = Math.min(0.4, (progress - 0.4) * 0.7);
+    ctx.fillStyle = `rgba(150,130,170,${textAlpha})`;
+    ctx.font = `${Math.floor(14 + progress * 4)}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('. . .', W / 2, H * 0.75);
+    ctx.textAlign = 'left';
+  }
+}
+
+// --- Main loop ---
+let lastTime = performance.now();
+
+function loop() {
+  const now = performance.now();
+  const rawDt = (now - lastTime) / 1000;
+  lastTime = now;
+
+  // Step simulation multiple times per frame for smoothness
+  if (fired && !outcome) {
+    const steps = 2;
+    for (let i = 0; i < steps; i++) {
+      stepOrion();
+      if (outcome) break;
+    }
+  }
+
+  // Auto-reset after result
+  if (outcome && resultTimer > 0) {
+    const elapsed = (now - resultTimer) / 1000;
+    const resetDelay = outcome === 'home' ? 10 : outcome === 'drift' ? 9 : 5;
+    if (elapsed > resetDelay) {
+      restart();
+    }
+  }
+
+  // Decide which view to draw
+  const homeElapsed = (outcome === 'home' && resultTimer > 0) ? (now - resultTimer) / 1000 : -1;
+  const driftElapsed = (outcome === 'drift' && resultTimer > 0) ? (now - resultTimer) / 1000 : -1;
+  const cinematicStart = 2.5;
+  const inHomeCinematic = homeElapsed > cinematicStart;
+  const inDriftCinematic = driftElapsed > 1.5;
+
+  if (inHomeCinematic) {
+    drawCinematicReturn(homeElapsed - cinematicStart);
+  } else if (inDriftCinematic) {
+    drawCinematicDrift(driftElapsed - 1.5);
+  } else {
+    // --- NORMAL: orbital view ---
+    updateCamera();
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#080b14';
+    ctx.fillRect(0, 0, W, H);
+
+    drawStars();
+    // Earth removed from main view — shown in cinematic return instead
+    drawMoon();
+    drawPreview();
+    drawTrail();
+    drawOrion();
+    drawCrashEffect();
+  }
+
+  // Outcome label
+  if (outcome === 'home') {
+    outcomeEl.textContent = 'Going home!';
+    outcomeEl.className = 'home';
+    outcomeEl.style.opacity = '';
+  } else if (outcome === 'crash') {
+    outcomeEl.textContent = 'Crashed into the Moon!';
+    outcomeEl.className = 'crash';
+    outcomeEl.style.opacity = '';
+  } else if (outcome === 'drift') {
+    outcomeEl.textContent = 'Drifting into deep space...';
+    outcomeEl.className = 'drift';
+    outcomeEl.style.opacity = '';
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// --- Controls ---
+function restart() {
+  fired = false;
+  trail = [];
+  outcome = null;
+  resultTimer = 0;
+  resetOrion();
+  outcomeEl.className = '';
+  outcomeEl.style.opacity = '0';
+  flybyBtn.disabled = false;
+  flybyBtn.textContent = 'Fly by!';
+  // Reset camera to normal view
+  camScale = 1;
+  camCX = W / 2;
+  camCY = H / 2;
+  targetScale = 1;
+  targetCX = W / 2;
+  targetCY = H / 2;
+}
+
+function fire() {
+  if (fired) return;
+  resetOrion(); // recalc from current slider value
+  fired = true;
+  trail = [];
+  outcome = null;
+  resultTimer = 0;
+  flybyBtn.disabled = true;
+  flybyBtn.textContent = '...';
+}
+
+distSlider.addEventListener('input', () => {
+  const v = parseInt(distSlider.value);
+  distValEl.textContent = v + ' km';
+  if (!fired) resetOrion(); // update preview
+  flybyBtn.disabled = false;
+  flybyBtn.textContent = 'Fly by!';
+});
+
+flybyBtn.addEventListener('click', fire);
+restartBtn.addEventListener('click', restart);
+
+// Init camera and start
+camCX = W / 2;
+camCY = H / 2;
+targetCX = W / 2;
+targetCY = H / 2;
+loop();
+</script>
+<footer style="text-align:center;padding:10px 0 24px;color:#556;font-size:11px;">Designed and Created by SCRR | R360 | 2026</footer>
+</body>
+</html>

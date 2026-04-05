@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 — Orbiting Is Falling | Artemis II</title>
+<style>
+  :root {
+    --bg: #0b0e17;
+    --surface: #131829;
+    --border: #2a3050;
+    --text: #d4daf0;
+    --text-dim: #8890aa;
+    --accent: #4e9fff;
+    --accent2: #36d399;
+    --orange: #ff8844;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 17px;
+    overflow-x: hidden;
+  }
+
+  /* Header — minimal */
+  header {
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+  .live-badge {
+    display: inline-block;
+    background: #ff3344;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+  @keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  header h1 {
+    font-size: 2.4em;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  header .subtitle {
+    color: var(--text-dim);
+    font-size: 1.05em;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Main canvas area */
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 1000px;
+    margin: 30px auto 0;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    border-radius: 12px;
+    background: #080b14;
+  }
+
+  /* Outcome label overlay */
+  #outcomeLabel {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    font-weight: 700;
+    padding: 8px 24px;
+    border-radius: 8px;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    opacity: 0;
+    white-space: nowrap;
+  }
+  #outcomeLabel.crashed {
+    background: rgba(255, 60, 60, 0.2);
+    border: 1px solid rgba(255, 60, 60, 0.4);
+    color: #ff6666;
+    opacity: 1;
+  }
+  #outcomeLabel.orbiting {
+    background: rgba(54, 211, 153, 0.15);
+    border: 1px solid rgba(54, 211, 153, 0.4);
+    color: #36d399;
+    opacity: 1;
+  }
+  #outcomeLabel.escape {
+    background: rgba(169, 127, 255, 0.15);
+    border: 1px solid rgba(169, 127, 255, 0.4);
+    color: #a97fff;
+    opacity: 1;
+  }
+
+  /* Controls */
+  .controls {
+    max-width: 700px;
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+  .speed-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .speed-row label {
+    font-size: 15px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .speed-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 6px;
+  }
+  .speed-row .speed-val {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 16px;
+    color: var(--orange);
+    min-width: 110px;
+    text-align: right;
+  }
+  .fire-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 14px;
+  }
+  #fireBtn {
+    background: linear-gradient(135deg, #ff4422, #ff6644);
+    color: #fff;
+    border: none;
+    padding: 12px 40px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  #fireBtn:hover { filter: brightness(1.15); transform: scale(1.03); }
+  #fireBtn:active { transform: scale(0.97); }
+  #fireBtn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    filter: none;
+    transform: none;
+  }
+  .hint {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 10px;
+  }
+
+  /* Explainer text below */
+  .explainer {
+    max-width: 660px;
+    margin: 40px auto;
+    padding: 0 20px 60px;
+  }
+  .explainer h2 {
+    font-size: 1.3em;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .explainer p {
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+  .callout {
+    background: var(--surface);
+    border-left: 4px solid var(--orange);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .callout strong { color: #fff; }
+
+  /* Phase nav */
+  .phase-nav {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+  }
+  .phase-nav span { color: var(--text-dim); font-size: 14px; }
+  .phase-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .top-nav { max-width: 660px; margin: 0 auto; padding: 12px 20px 0; display: flex; justify-content: space-between; }
+  .top-nav a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 22px; opacity: 0.7; transition: opacity 0.2s; }
+  .top-nav a:hover { opacity: 1; }
+  .top-nav .placeholder { width: 22px; }
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <span class="placeholder"></span>
+  <a href="part2_the_journey.html">&rarr;</a>
+</div>
+
+<header>
+  <div class="live-badge">Learn Astrophysics — Artemis II Mission</div>
+  <h1>Orbiting Is Falling</h1>
+  <p class="subtitle">The only difference between a ball dropping<br>and a spacecraft orbiting is speed.</p>
+</header>
+
+<div class="canvas-wrap">
+  <canvas id="sim"></canvas>
+  <div id="outcomeLabel"></div>
+</div>
+
+<div class="controls">
+  <div class="speed-row">
+    <label for="speed">Launch speed:</label>
+    <input type="range" id="speed" min="1000" max="9500" value="2000" step="50">
+    <span class="speed-val" id="speedVal">2,000 m/s</span>
+  </div>
+  <div class="fire-row">
+    <button id="fireBtn">Fire!</button>
+  </div>
+  <div class="hint">Choose a speed, then fire. Try increasing it gradually.</div>
+</div>
+
+<div class="explainer">
+  <h2>What you're seeing</h2>
+  <p>You're on top of a mountain, launching a projectile forward. Gravity pulls it down. At low speeds it arcs and hits the ground — exactly what you'd expect.</p>
+  <p>But increase the speed and the arc gets longer. The projectile travels so far that something changes: <strong>the Earth curves away beneath it.</strong> The ground is dropping as fast as the projectile is falling.</p>
+  <p>At about <strong>7,800 m/s</strong>, the projectile never lands. It keeps falling, and keeps missing. The trail wraps all the way around and connects with itself.</p>
+  <p><strong>That's an orbit.</strong> It's not floating. It's not weightless because gravity stopped. It's falling — permanently — with the ground forever curving away.</p>
+
+  <div class="callout">
+    <strong>Artemis II right now:</strong> The Orion capsule and its four crew are falling. They've been falling since their engines cut off two days ago. They'll keep falling all the way to the Moon and back. Everything in space falls. The only question is: how fast, and in what direction?
+  </div>
+</div>
+
+<div class="phase-nav">
+  <span>Part 1 — Orbiting</span>
+  <a href="part2_the_journey.html">Part 2: The Journey &rarr;</a>
+</div>
+
+<script>
+// ============================================================
+// SIMULATION: Projectile from mountaintop with auto-zoom
+// ============================================================
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+const slider = document.getElementById('speed');
+const speedValEl = document.getElementById('speedVal');
+const outcomeEl = document.getElementById('outcomeLabel');
+
+// --- Constants ---
+const G  = 6.674e-11;
+const ME = 5.972e24;
+const RE = 6.371e6;
+const mu = G * ME;
+
+// --- Canvas sizing ---
+let W, H, dpr;
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = rect.width;
+  H = Math.min(W * 0.75, window.innerHeight * 0.65);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', () => { resize(); });
+
+// --- Simulation state ---
+let trail = [];
+let simResult = null; // { outcome, maxR, trail[] }
+let animT = 0; // how much of the trail to show (0..1 for drawing, then hold)
+let animFrame = 0;
+let lastSpeed = -1;
+
+// Launch point: top of a mountain (100km above surface, at angle π/2 = "top")
+const LAUNCH_ALT = 100000; // 100 km
+const LAUNCH_R = RE + LAUNCH_ALT;
+const LAUNCH_ANGLE = Math.PI / 2; // top of Earth
+
+function simulate(speed) {
+  const pts = [];
+  // Start position: top of Earth
+  let x = 0, y = LAUNCH_R;
+  // Velocity: horizontal (tangent to surface at top = rightward)
+  let vx = speed, vy = 0;
+
+  const dt = 1.5;
+  let maxR = LAUNCH_R;
+  let crashed = false;
+  let orbited = false;
+  let escaped = false;
+  let totalAngle = 0;
+  let prevAngle = Math.atan2(y, x);
+
+  pts.push({ x, y });
+
+  for (let i = 0; i < 80000; i++) {
+    const r = Math.sqrt(x * x + y * y);
+    if (r < RE) { crashed = true; break; }
+    if (r > RE * 25) { escaped = true; break; }
+    if (r > maxR) maxR = r;
+
+    const a = -mu / (r * r);
+    const ax = a * x / r;
+    const ay = a * y / r;
+    vx += ax * dt;
+    vy += ay * dt;
+    x += vx * dt;
+    y += vy * dt;
+
+    // Track total angular sweep
+    const angle = Math.atan2(y, x);
+    let dAngle = angle - prevAngle;
+    if (dAngle > Math.PI) dAngle -= 2 * Math.PI;
+    if (dAngle < -Math.PI) dAngle += 2 * Math.PI;
+    totalAngle += dAngle;
+    prevAngle = angle;
+
+    if (i % 2 === 0) pts.push({ x, y });
+
+    // Check if completed a full orbit
+    if (Math.abs(totalAngle) >= Math.PI * 2.15 && !crashed) {
+      orbited = true;
+      break;
+    }
+  }
+
+  const outcome = crashed ? 'crashed' : escaped ? 'escape' : orbited ? 'orbiting' : 'orbiting';
+  return { outcome, maxR, trail: pts };
+}
+
+// --- Camera: compute view bounds to fit the trail ---
+// Key idea: start tight on the mountaintop. Only zoom out as the trail grows.
+// The zoom-out IS the lesson — you gradually discover you're on a sphere.
+const CLOSE_VIEW = RE * 0.018;  // very tight on mountaintop
+
+function computeView(trailSlice, outcome) {
+  if (trailSlice.length === 0) {
+    // Start: tight on launch point, looking at the mountain and nearby ground
+    return { cx: LAUNCH_ALT * 0.5, cy: LAUNCH_R, viewR: CLOSE_VIEW };
+  }
+
+  // Find bounding box of visible trail + launch point
+  let minX = 0, maxX = 0, minY = LAUNCH_R, maxY = LAUNCH_R;
+
+  for (const p of trailSlice) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  // Pad the bounding box
+  const padFactor = 1.6;
+  const spanX = (maxX - minX) * padFactor;
+  const spanY = (maxY - minY) * padFactor;
+  let viewR = Math.max(spanX, spanY) / 2;
+
+  // Always at least as zoomed in as close view
+  viewR = Math.max(viewR, CLOSE_VIEW);
+
+  // Centre on the trail midpoint, biased toward the head (latest point)
+  const head = trailSlice[trailSlice.length - 1];
+  const midX = (minX + maxX) / 2;
+  const midY = (minY + maxY) / 2;
+  // Blend between trail midpoint and head — keeps the action visible
+  const cx = midX * 0.6 + head.x * 0.4;
+  const cy = midY * 0.6 + head.y * 0.4;
+
+  // For orbiting/escape: once animation is done, pull back to show full Earth
+  if (outcome === 'orbiting' || outcome === 'escape') {
+    viewR = Math.max(viewR, RE * 1.7);
+    // Centre on Earth for the full reveal
+    return { cx: 0, cy: 0, viewR };
+  }
+
+  return { cx, cy, viewR };
+}
+
+// Smooth interpolation for camera
+let camX = LAUNCH_ALT * 0.5, camY = LAUNCH_R, camR = CLOSE_VIEW;
+
+function lerpCam(target) {
+  // Lerp faster when zooming out (the reveal), slower when settling
+  const zoomDiff = Math.abs(target.viewR - camR) / RE;
+  const speed = 0.03 + zoomDiff * 0.5; // faster when big zoom change needed
+  const s = Math.min(0.12, speed);
+  camX += (target.cx - camX) * s;
+  camY += (target.cy - camY) * s;
+  camR += (target.viewR - camR) * s;
+}
+
+// --- World-to-screen transform ---
+function w2s(wx, wy) {
+  const scale = Math.min(W, H) / (camR * 2);
+  return {
+    x: W / 2 + (wx - camX) * scale,
+    y: H / 2 - (wy - camY) * scale
+  };
+}
+function worldRadius(r) {
+  const scale = Math.min(W, H) / (camR * 2);
+  return r * scale;
+}
+
+// --- Draw ---
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky / space background
+  ctx.fillStyle = '#080b14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars (only visible when zoomed out enough)
+  const starAlpha = Math.max(0, Math.min(1, (camR - RE * 0.5) / (RE * 1.0)));
+  if (starAlpha > 0.01) {
+    ctx.globalAlpha = starAlpha * 0.6;
+    for (let i = 0; i < 100; i++) {
+      const sx = (i * 137.5 + 50) % W;
+      const sy = (i * 97.3 + 30) % H;
+      ctx.fillStyle = '#c8d2f0';
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  const earthR = worldRadius(RE);
+  const earthS = w2s(0, 0);
+
+  // --- Earth ---
+  // Atmosphere glow
+  if (earthR > 15) {
+    const atmosR = earthR * 1.02;
+    const glow = ctx.createRadialGradient(earthS.x, earthS.y, earthR * 0.95, earthS.x, earthS.y, atmosR + earthR * 0.08);
+    glow.addColorStop(0, 'rgba(100,180,255,0.08)');
+    glow.addColorStop(1, 'rgba(100,180,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(earthS.x, earthS.y, atmosR + earthR * 0.08, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Earth body
+  const eg = ctx.createRadialGradient(
+    earthS.x - earthR * 0.15, earthS.y - earthR * 0.15, earthR * 0.05,
+    earthS.x, earthS.y, earthR
+  );
+  eg.addColorStop(0, '#4a9edd');
+  eg.addColorStop(0.4, '#3580bb');
+  eg.addColorStop(0.8, '#2a6699');
+  eg.addColorStop(1, '#1d4a70');
+  ctx.fillStyle = eg;
+  ctx.beginPath(); ctx.arc(earthS.x, earthS.y, earthR, 0, Math.PI * 2); ctx.fill();
+
+  // --- Landmasses (Asia-ish, clipped to Earth circle) ---
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(earthS.x, earthS.y, earthR * 0.99, 0, Math.PI * 2);
+  ctx.clip();
+
+  const landColor = 'rgba(45, 120, 60, 0.45)';
+  const landLight = 'rgba(65, 145, 75, 0.35)';
+
+  // Each landmass: [angleDeg from top, distFromCentre (0-1), radiusX, radiusY, rotation]
+  // Mountain is at top (π/2). We place Asia around it.
+  const lands = [
+    // Central/South Asia (big mass around the mountain)
+    { a: 85, d: 0.45, rx: 0.32, ry: 0.22, rot: -10, c: landColor },
+    // Siberia / Northern Asia
+    { a: 65, d: 0.55, rx: 0.35, ry: 0.14, rot: 15, c: landLight },
+    // Southeast Asia peninsula
+    { a: 105, d: 0.58, rx: 0.08, ry: 0.18, rot: -15, c: landColor },
+    // China / East Asia
+    { a: 72, d: 0.40, rx: 0.2, ry: 0.18, rot: 25, c: landColor },
+    // Indian subcontinent
+    { a: 110, d: 0.42, rx: 0.1, ry: 0.15, rot: -5, c: landColor },
+    // Arabian peninsula
+    { a: 115, d: 0.28, rx: 0.09, ry: 0.12, rot: -20, c: landLight },
+    // Indonesia archipelago (small dots)
+    { a: 120, d: 0.68, rx: 0.12, ry: 0.03, rot: 10, c: landColor },
+    // Japan
+    { a: 58, d: 0.62, rx: 0.03, ry: 0.1, rot: 20, c: landColor },
+    // Middle East / Central Asia fill
+    { a: 95, d: 0.25, rx: 0.15, ry: 0.1, rot: 0, c: landLight },
+    // Africa (eastern edge, partially visible)
+    { a: 135, d: 0.35, rx: 0.12, ry: 0.25, rot: -10, c: landLight },
+  ];
+
+  for (const l of lands) {
+    const angleRad = l.a * Math.PI / 180;
+    const cx = earthS.x + Math.cos(angleRad) * earthR * l.d;
+    const cy = earthS.y - Math.sin(angleRad) * earthR * l.d;
+    const rx = earthR * l.rx;
+    const ry = earthR * l.ry;
+    const rotRad = l.rot * Math.PI / 180;
+
+    ctx.fillStyle = l.c;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, rotRad, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Earth label (only when zoomed out)
+  if (earthR > 30 && earthR < 400) {
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = `${Math.min(14, Math.max(10, earthR * 0.12))}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Earth', earthS.x, earthS.y + 4);
+    ctx.textAlign = 'left';
+  }
+
+  // --- Mountain at launch point ---
+  const mtBase = w2s(
+    (RE - 500) * Math.cos(LAUNCH_ANGLE - 0.008),
+    (RE - 500) * Math.sin(LAUNCH_ANGLE - 0.008)
+  );
+  const mtBase2 = w2s(
+    (RE - 500) * Math.cos(LAUNCH_ANGLE + 0.008),
+    (RE - 500) * Math.sin(LAUNCH_ANGLE + 0.008)
+  );
+  const mtTop = w2s(LAUNCH_R * Math.cos(LAUNCH_ANGLE), LAUNCH_R * Math.sin(LAUNCH_ANGLE));
+  const mtSize = worldRadius(LAUNCH_ALT);
+
+  if (mtSize > 3) {
+    ctx.fillStyle = '#5a4a3a';
+    ctx.beginPath();
+    ctx.moveTo(mtBase.x, mtBase.y);
+    ctx.lineTo(mtTop.x, mtTop.y);
+    ctx.lineTo(mtBase2.x, mtBase2.y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Snow cap
+    const snowTop = w2s(
+      (LAUNCH_R - LAUNCH_ALT * 0.05) * Math.cos(LAUNCH_ANGLE),
+      (LAUNCH_R - LAUNCH_ALT * 0.05) * Math.sin(LAUNCH_ANGLE)
+    );
+    if (mtSize > 8) {
+      ctx.fillStyle = 'rgba(220,230,240,0.5)';
+      ctx.beginPath();
+      const sw = Math.max(2, mtSize * 0.15);
+      ctx.moveTo(mtTop.x - sw, mtTop.y + sw * 0.4);
+      ctx.lineTo(mtTop.x, mtTop.y);
+      ctx.lineTo(mtTop.x + sw, mtTop.y + sw * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // --- Trail ---
+  if (simResult && simResult.trail.length > 1) {
+    const showCount = Math.min(
+      simResult.trail.length,
+      Math.floor(animT * simResult.trail.length)
+    );
+
+    if (showCount > 1) {
+      // Draw trail with gradient: bright orange fading to dim
+      for (let i = 1; i < showCount; i++) {
+        const p0 = w2s(simResult.trail[i - 1].x, simResult.trail[i - 1].y);
+        const p1 = w2s(simResult.trail[i].x, simResult.trail[i].y);
+
+        const progress = i / simResult.trail.length;
+        const alpha = 0.3 + 0.7 * (1 - progress * 0.5);
+
+        ctx.strokeStyle = simResult.outcome === 'orbiting'
+          ? `rgba(54,211,153,${alpha})`
+          : simResult.outcome === 'escape'
+            ? `rgba(169,127,255,${alpha})`
+            : `rgba(255,136,68,${alpha})`;
+        ctx.lineWidth = Math.max(1.5, 3 - progress * 2);
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
+
+      // Projectile dot at head of trail — interpolated for smooth motion
+      const exactIdx = animT * (simResult.trail.length - 1);
+      const idx0 = Math.floor(exactIdx);
+      const idx1 = Math.min(idx0 + 1, simResult.trail.length - 1);
+      const frac = exactIdx - idx0;
+      const head = {
+        x: simResult.trail[idx0].x + (simResult.trail[idx1].x - simResult.trail[idx0].x) * frac,
+        y: simResult.trail[idx0].y + (simResult.trail[idx1].y - simResult.trail[idx0].y) * frac
+      };
+      const hs = w2s(head.x, head.y);
+      const dotR = Math.max(3, Math.min(6, worldRadius(RE * 0.008)));
+
+      // Glow
+      const dotColor = simResult.outcome === 'orbiting' ? '#36d399'
+        : simResult.outcome === 'escape' ? '#a97fff' : '#ff8844';
+      const glow = ctx.createRadialGradient(hs.x, hs.y, 0, hs.x, hs.y, dotR * 4);
+      glow.addColorStop(0, dotColor + '66');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(hs.x, hs.y, dotR * 4, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(hs.x, hs.y, dotR, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = dotColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(hs.x, hs.y, dotR, 0, Math.PI * 2); ctx.stroke();
+
+      // Crash explosion — uses a separate timer so it plays at a consistent pace
+      // regardless of drawSpeed
+      if (simResult.outcome === 'crashed' && animT >= 0.95) {
+        if (!simResult._explodeStart) simResult._explodeStart = performance.now();
+        const cp = simResult.trail[simResult.trail.length - 1];
+        const cs = w2s(cp.x, cp.y);
+        // Explosion runs for 1.5 seconds real time
+        const explodeT = Math.min(1, (performance.now() - simResult._explodeStart) / 1500);
+
+        // Flash — bright white/yellow burst that fades quickly
+        if (explodeT < 0.4) {
+          const flashAlpha = (1 - explodeT / 0.4) * 0.8;
+          const flashR = dotR * (3 + explodeT * 20);
+          const flash = ctx.createRadialGradient(cs.x, cs.y, 0, cs.x, cs.y, flashR);
+          flash.addColorStop(0, `rgba(255,255,200,${flashAlpha})`);
+          flash.addColorStop(0.3, `rgba(255,180,50,${flashAlpha * 0.7})`);
+          flash.addColorStop(1, 'rgba(255,100,30,0)');
+          ctx.fillStyle = flash;
+          ctx.beginPath(); ctx.arc(cs.x, cs.y, flashR, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // Expanding fireball ring
+        const ringR = dotR * (2 + explodeT * 25);
+        const ringAlpha = (1 - explodeT) * 0.6;
+        ctx.strokeStyle = `rgba(255,120,30,${ringAlpha})`;
+        ctx.lineWidth = Math.max(1, 3 * (1 - explodeT));
+        ctx.beginPath(); ctx.arc(cs.x, cs.y, ringR, 0, Math.PI * 2); ctx.stroke();
+
+        // Smoke cloud — grows and fades
+        const smokeR = dotR * (5 + explodeT * 18);
+        const smokeAlpha = (1 - explodeT) * 0.3;
+        const smoke = ctx.createRadialGradient(cs.x, cs.y, 0, cs.x, cs.y, smokeR);
+        smoke.addColorStop(0, `rgba(80,60,40,${smokeAlpha})`);
+        smoke.addColorStop(0.5, `rgba(60,50,40,${smokeAlpha * 0.5})`);
+        smoke.addColorStop(1, 'rgba(40,30,20,0)');
+        ctx.fillStyle = smoke;
+        ctx.beginPath(); ctx.arc(cs.x, cs.y, smokeR, 0, Math.PI * 2); ctx.fill();
+
+        // Debris particles — fly outward from crash point
+        if (!simResult._debris) {
+          // Generate debris once on first explosion frame
+          simResult._debris = [];
+          for (let d = 0; d < 12; d++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = 0.5 + Math.random() * 1.5;
+            const size = 1 + Math.random() * 2.5;
+            const r = Math.floor(200 + Math.random() * 55);
+            const g = Math.floor(80 + Math.random() * 100);
+            const b = Math.floor(20 + Math.random() * 40);
+            simResult._debris.push({ angle, spd, size, r, g, b });
+          }
+        }
+        for (const d of simResult._debris) {
+          const dist = d.spd * explodeT * dotR * 20;
+          const dx = cs.x + Math.cos(d.angle) * dist;
+          const dy = cs.y + Math.sin(d.angle) * dist;
+          const alpha = (1 - explodeT) * 0.9;
+          const sz = d.size * (1 - explodeT * 0.5);
+          ctx.fillStyle = `rgba(${d.r},${d.g},${d.b},${alpha})`;
+          ctx.beginPath(); ctx.arc(dx, dy, sz, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+  }
+
+  // --- Ground line hint (subtle arc showing curvature) ---
+  // Only when zoomed in enough that curvature isn't obvious from the Earth circle
+  if (earthR > 300) {
+    ctx.strokeStyle = 'rgba(100,180,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(earthS.x, earthS.y, earthR, -Math.PI * 0.5 - 0.3, -Math.PI * 0.5 + 0.3);
+    ctx.stroke();
+  }
+}
+
+// --- State ---
+let fired = false;
+const fireBtn = document.getElementById('fireBtn');
+
+function fmt(n) { return n.toLocaleString('en-US'); }
+
+function fire() {
+  const speed = parseInt(slider.value);
+  simResult = simulate(speed);
+  animT = 0;
+  fired = true;
+
+  // Reset camera to tight mountaintop
+  camX = LAUNCH_ALT * 0.5;
+  camY = LAUNCH_R;
+  camR = CLOSE_VIEW;
+
+  // Clear outcome
+  outcomeEl.className = '';
+  outcomeEl.style.opacity = '0';
+
+  // Disable button during animation
+  fireBtn.disabled = true;
+  fireBtn.textContent = '...';
+
+  // Re-enable after animation completes
+  // Match button timeout to animation duration
+  const sp = parseInt(slider.value);
+  const tNorm = Math.max(0, Math.min(1, (sp - 1000) / 8000));
+  const duration = 4000 + tNorm * 56000;  // 4s at low speed, 60s at orbital speed
+  setTimeout(() => {
+    fireBtn.disabled = false;
+    fireBtn.textContent = 'Fire!';
+  }, duration);
+}
+
+// --- Animation loop ---
+function loop() {
+  // Advance animation if fired
+  if (fired && simResult) {
+    // Slower animation at higher speeds — the orbit shots deserve the most screen time
+    // At 1000 m/s: ~0.007 (quick crash). At 7800+ m/s: ~0.001 (very slow, dramatic orbit)
+    const speed = parseInt(slider.value);
+    const t = Math.max(0, Math.min(1, (speed - 1000) / (9000 - 1000))); // 0 at 1000, 1 at 9000
+    const drawSpeed = 0.007 - t * 0.006;  // ranges from 0.007 (fast) to 0.001 (very slow)
+    if (animT < 1) {
+      animT = Math.min(1, animT + drawSpeed);
+    }
+
+    // Compute visible trail
+    const showCount = Math.floor(animT * simResult.trail.length);
+    const visibleTrail = simResult.trail.slice(0, showCount);
+
+    // Camera follows the trail as it grows
+    // For orbiting trajectories, start the full-Earth reveal earlier
+    const revealThreshold = simResult.outcome === 'orbiting' ? 0.4 : 0.92;
+    const target = computeView(visibleTrail, animT >= revealThreshold ? simResult.outcome : 'in_progress');
+    lerpCam(target);
+
+    // Outcome label — show once animation is far enough along
+    if (animT >= 0.45) {
+      if (simResult.outcome === 'crashed') {
+        outcomeEl.textContent = 'Crashed.';
+        outcomeEl.className = 'crashed';
+      } else if (simResult.outcome === 'orbiting') {
+        outcomeEl.textContent = 'Still falling...';
+        outcomeEl.className = 'orbiting';
+      } else if (simResult.outcome === 'escape') {
+        outcomeEl.textContent = 'Gone forever.';
+        outcomeEl.className = 'escape';
+      }
+      outcomeEl.style.opacity = '';  // clear inline override, let class CSS handle it
+    }
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// --- Slider: updates display and re-enables fire (user is ready for a new shot) ---
+slider.addEventListener('input', () => {
+  const v = parseInt(slider.value);
+  speedValEl.textContent = fmt(v) + ' m/s';
+  fireBtn.disabled = false;
+  fireBtn.textContent = 'Fire!';
+});
+
+// --- Fire button ---
+fireBtn.addEventListener('click', fire);
+
+// Start render loop (shows idle mountain scene until first fire)
+// No auto-fire — user must click the button.
+loop();
+</script>
+<footer style="text-align:center;padding:10px 0 24px;color:#556;font-size:11px;">Designed and Created by SCRR | R360 | 2026</footer>
+</body>
+</html>

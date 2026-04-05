@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning Orbital Mechanics — Artemis II</title>
+<style>
+  :root { --bg: #0b0e17; --text: #d4daf0; --text-dim: #8890aa; --accent: #4e9fff; --accent2: #36d399; --border: #2a3050; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; }
+  h1 { font-size: 2.4em; color: #fff; margin-bottom: 8px; text-align: center; }
+  .subtitle { color: var(--text-dim); font-size: 1.1em; margin-bottom: 48px; text-align: center; line-height: 1.6; }
+  .parts { list-style: none; max-width: 520px; width: 100%; }
+  .parts li { margin-bottom: 16px; }
+  .parts a {
+    display: block; padding: 20px 24px; border-radius: 10px; text-decoration: none;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .parts a:hover { background: rgba(78,159,255,0.08); border-color: var(--accent); }
+  .part-num { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 700; }
+  .part-title { font-size: 1.2em; color: #fff; font-weight: 600; margin: 4px 0 6px; }
+  .part-desc { font-size: 14px; color: var(--text-dim); line-height: 1.5; }
+  footer { margin-top: 60px; color: #556; font-size: 11px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Artemis II</h1>
+<p class="subtitle">An interactive guide to orbital mechanics.<br>No physics required — just curiosity.</p>
+
+<ul class="parts">
+  <li>
+    <a href="phase1_why_things_orbit.html">
+      <div class="part-num">Part 1</div>
+      <div class="part-title">Orbiting Is Falling</div>
+      <div class="part-desc">The only difference between a ball dropping and a spacecraft orbiting is speed.</div>
+    </a>
+  </li>
+  <li>
+    <a href="part2_the_journey.html">
+      <div class="part-num">Part 2</div>
+      <div class="part-title">Throwing to Where the Moon Will Be</div>
+      <div class="part-desc">You don't aim at the Moon. You aim at where it's going to be.</div>
+    </a>
+  </li>
+  <li>
+    <a href="part3_the_slingshot.html">
+      <div class="part-num">Part 3</div>
+      <div class="part-title">The Slingshot</div>
+      <div class="part-desc">The Moon's gravity bends Orion's path and flings it home. No engine needed.</div>
+    </a>
+  </li>
+  <li>
+    <a href="part4_hitting_the_bullseye.html">
+      <div class="part-num">Part 4</div>
+      <div class="part-title">Hitting the Bullseye</div>
+      <div class="part-desc">After a 1.6 million km round trip at Mach 32, you have a 2.5° window to survive reentry.</div>
+    </a>
+  </li>
+</ul>
+
+<footer>Designed and Created by SCRR | R360 | 2026</footer>
+
+</body>
+</html>
