@@ -136,10 +136,24 @@
   .fire-row {
     display: flex;
     justify-content: center;
+    gap: 12px;
     margin-top: 14px;
   }
+  #restartBtn {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.2s, color 0.2s;
+  }
+  #restartBtn:hover { border-color: var(--text-dim); color: var(--text); }
+  #restartBtn:active { transform: scale(0.97); }
   #fireBtn {
-    background: linear-gradient(135deg, #ff4422, #ff6644);
+    background: linear-gradient(135deg, #36d399, #2ab380);
     color: #fff;
     border: none;
     padding: 12px 40px;
@@ -234,9 +248,10 @@
     <span class="speed-val" id="speedVal">2,000 m/s</span>
   </div>
   <div class="fire-row">
-    <button id="fireBtn">Fire!</button>
+    <button id="restartBtn">Restart</button>
+    <button id="fireBtn">Launch!</button>
   </div>
-  <div class="hint">Choose a speed, then fire. Try increasing it gradually.</div>
+  <div class="hint">Choose a speed, then launch. Try increasing it gradually.</div>
 </div>
 
 <div class="explainer">
@@ -733,7 +748,7 @@ function fire() {
   const duration = 4000 + tNorm * 56000;  // 4s at low speed, 60s at orbital speed
   setTimeout(() => {
     fireBtn.disabled = false;
-    fireBtn.textContent = 'Fire!';
+    fireBtn.textContent = 'Launch!';
   }, duration);
 }
 
@@ -785,7 +800,22 @@ slider.addEventListener('input', () => {
   const v = parseInt(slider.value);
   speedValEl.textContent = fmt(v) + ' m/s';
   fireBtn.disabled = false;
-  fireBtn.textContent = 'Fire!';
+  fireBtn.textContent = 'Launch!';
+});
+
+// --- Restart button ---
+const restartBtn = document.getElementById('restartBtn');
+restartBtn.addEventListener('click', () => {
+  fired = false;
+  simResult = null;
+  animT = 0;
+  outcomeEl.className = '';
+  outcomeEl.style.opacity = '0';
+  camX = LAUNCH_ALT * 0.5;
+  camY = LAUNCH_R;
+  camR = CLOSE_VIEW;
+  fireBtn.disabled = false;
+  fireBtn.textContent = 'Launch!';
 });
 
 // --- Fire button ---
