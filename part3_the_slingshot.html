@@ -189,9 +189,10 @@ let resultTimer = 0;
 let ox, oy, ovx, ovy;
 
 // Slider value mapped to flyby distance in pixels (from Moon surface)
+// Capped so Orion always starts within the canvas
 function flybyPx() {
-  // Slider 20..400 maps to ~10px..180px from Moon surface
-  return 10 + (parseInt(distSlider.value) - 20) / 380 * 170;
+  const maxDist = Math.max(40, getMoonY() - MOON_PX - 20); // stay within canvas
+  return 10 + (parseInt(distSlider.value) - 20) / 380 * Math.min(170, maxDist - MOON_PX);
 }
 
 function getMoonY() { return H * MOON_Y_FRAC; }
